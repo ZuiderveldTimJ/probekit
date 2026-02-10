@@ -33,6 +33,7 @@ dev = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["probekit*"]
+exclude = ["probekit.tests*"]
 
 [tool.ruff]
 line-length = 120
