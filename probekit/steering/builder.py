@@ -10,7 +10,7 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import torch
@@ -77,11 +77,14 @@ def build_steering_vector(
 
     # Case 2: Legacy Dictionary
     elif isinstance(probe, dict):
-        features = probe.get("features", probe.get("feature_indices", []))
-        weights = probe.get("weights")
+        features_raw = probe.get("features", probe.get("feature_indices", []))
+        weights_raw = probe.get("weights")
 
-        if weights is None:
+        if weights_raw is None:
             raise ValueError("Probe dictionary must contain 'weights'.")
+
+        features = cast(list[int], features_raw)
+        weights = cast(list[float], weights_raw)
 
         n_features_used = len(features)
 
