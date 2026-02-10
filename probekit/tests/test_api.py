@@ -1,6 +1,9 @@
+from typing import Any
+
 import numpy as np
 import pytest
 import torch
+from numpy.typing import NDArray
 
 from probekit.api import dim_probe, logistic_probe, nelp_probe, sae_probe
 from probekit.core.collection import ProbeCollection
@@ -8,21 +11,21 @@ from probekit.core.probe import LinearProbe
 
 
 @pytest.fixture
-def data_2d():
+def data_2d() -> tuple[NDArray[Any], NDArray[Any]]:
     x = np.random.randn(10, 5).astype(np.float32)
     y = np.random.randint(0, 2, size=(10,)).astype(np.int32)
     return x, y
 
 
 @pytest.fixture
-def data_3d():
+def data_3d() -> tuple[torch.Tensor, torch.Tensor]:
     # [B, N, D]
     x = torch.randn(2, 10, 5)
     y = torch.randint(0, 2, size=(2, 10))
     return x, y
 
 
-def test_api_routing_2d(data_2d):
+def test_api_routing_2d(data_2d: tuple[NDArray[Any], NDArray[Any]]) -> None:
     x, y = data_2d
     # Test sae_probe (logistic)
     probe = sae_probe(x, y)
@@ -34,7 +37,7 @@ def test_api_routing_2d(data_2d):
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
-def test_api_routing_3d(data_3d):
+def test_api_routing_3d(data_3d: tuple[torch.Tensor, torch.Tensor]) -> None:
     x, y = data_3d
     # Test sae_probe (logistic_batch)
     collection = sae_probe(x, y)
@@ -47,7 +50,7 @@ def test_api_routing_3d(data_3d):
     assert len(collection_dim.probekit) == 2
 
 
-def test_aliases(data_2d):
+def test_aliases(data_2d: tuple[NDArray[Any], NDArray[Any]]) -> None:
     x, y = data_2d
     p1 = sae_probe(x, y)
     p2 = logistic_probe(x, y)

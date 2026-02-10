@@ -20,10 +20,12 @@ class ProbeCollection:
         return len(self.probekit)
 
     @overload
-    def __getitem__(self, index: int) -> LinearProbe: ...
+    def __getitem__(self, index: int) -> LinearProbe:
+        ...
 
     @overload
-    def __getitem__(self, index: slice) -> "ProbeCollection": ...
+    def __getitem__(self, index: slice) -> "ProbeCollection":
+        ...
 
     def __getitem__(self, index: int | slice) -> Union[LinearProbe, "ProbeCollection"]:
         if isinstance(index, slice):

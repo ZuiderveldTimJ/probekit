@@ -1,5 +1,8 @@
+from typing import Any
+
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from probekit.core.probe import LinearProbe, NormalizationStats
 from probekit.fitters.dim import fit_dim
@@ -8,7 +11,7 @@ from probekit.fitters.logistic import fit_logistic
 
 
 @pytest.fixture
-def sample_data():
+def sample_data() -> tuple[NDArray[Any], NDArray[Any]]:
     """Generate sample training data."""
     np.random.seed(42)
     n_samples = 100
@@ -24,7 +27,7 @@ def sample_data():
 
 
 class TestLinearProbe:
-    def test_init_and_properties(self):
+    def test_init_and_properties(self) -> None:
         weights = np.array([1.0, 2.0, 3.0], dtype=np.float32)
         bias = 0.5
         probe = LinearProbe(weights, bias)
@@ -33,7 +36,7 @@ class TestLinearProbe:
         assert probe.bias == 0.5
         assert np.allclose(probe.direction, weights)
 
-    def test_predict_score(self):
+    def test_predict_score(self) -> None:
         # x = [1, 1, 1] -> 1*1 + 2*1 + 3*1 + 0.5 = 6.5
         weights = np.array([1.0, 2.0, 3.0], dtype=np.float32)
         bias = 0.5
@@ -43,7 +46,7 @@ class TestLinearProbe:
         scores = probe.predict_score(x)
         assert np.allclose(scores, [6.5])
 
-    def test_predict_threshold(self):
+    def test_predict_threshold(self) -> None:
         weights = np.array([1.0], dtype=np.float32)
         bias = 0.0
         probe = LinearProbe(weights, bias)
@@ -52,7 +55,7 @@ class TestLinearProbe:
         preds = probe.predict(x, threshold=0.0)
         assert np.allclose(preds.flatten(), [0, 1])
 
-    def test_normalization(self):
+    def test_normalization(self) -> None:
         weights = np.array([1.0], dtype=np.float32)
         # norm: mean=10, std=2. x=12 -> (12-10)/2 = 1. 1*1 = 1.
         norm = NormalizationStats(mean=np.array([10.0]), std=np.array([2.0]), count=100)
@@ -62,7 +65,7 @@ class TestLinearProbe:
         scores = probe.predict_score(x)
         assert np.allclose(scores, [1.0])
 
-    def test_serialization(self):
+    def test_serialization(self) -> None:
         weights = np.array([1.0, 2.0], dtype=np.float32)
         probe = LinearProbe(weights, bias=0.5)
         data = probe.to_dict()
@@ -73,7 +76,7 @@ class TestLinearProbe:
 
 
 class TestFitters:
-    def test_fit_logistic(self, sample_data):
+    def test_fit_logistic(self, sample_data: tuple[NDArray[Any], NDArray[Any]]) -> None:
         x, y = sample_data
         probe = fit_logistic(x, y, c_param=1.0)
         assert isinstance(probe, LinearProbe)
@@ -82,7 +85,7 @@ class TestFitters:
         acc = (probe.predict(x) == y).mean()
         assert acc > 0.8
 
-    def test_fit_elastic(self, sample_data):
+    def test_fit_elastic(self, sample_data: tuple[NDArray[Any], NDArray[Any]]) -> None:
         x, y = sample_data
         probe = fit_elastic_net(x, y, l1_ratios=[0.5])
         assert isinstance(probe, LinearProbe)
@@ -90,7 +93,7 @@ class TestFitters:
         # Weights should be somewhat sparse or at least learned
         assert np.any(probe.weights != 0)
 
-    def test_fit_dim(self, sample_data):
+    def test_fit_dim(self, sample_data: tuple[NDArray[Any], NDArray[Any]]) -> None:
         x, y = sample_data
         probe = fit_dim(x, y)
         assert isinstance(probe, LinearProbe)

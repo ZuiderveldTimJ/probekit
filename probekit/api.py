@@ -2,6 +2,7 @@ from typing import Any
 
 import numpy as np
 import torch
+from numpy.typing import NDArray
 
 from .core.collection import ProbeCollection
 from .core.probe import LinearProbe
@@ -17,13 +18,13 @@ def _ensure_tensor(x: Any, device: str = "cuda") -> torch.Tensor:
     return x.to(device)  # Ensure on device
 
 
-def _ensure_numpy(x: Any) -> np.ndarray:
+def _ensure_numpy(x: Any) -> NDArray[Any]:
     if isinstance(x, torch.Tensor):
         return x.detach().cpu().numpy()
     return np.array(x)
 
 
-def sae_probe(x: Any, y: Any, **kwargs) -> LinearProbe | ProbeCollection:
+def sae_probe(x: Any, y: Any, **kwargs: Any) -> LinearProbe | ProbeCollection:
     """
     Fit a probe on SAE features.
     Routes to batched implementation if x is 3D [B, N, D], else single [N, D].
@@ -50,17 +51,17 @@ def sae_probe(x: Any, y: Any, **kwargs) -> LinearProbe | ProbeCollection:
         return fit_logistic(x, y, **kwargs)
 
 
-def logistic_probe(x: Any, y: Any, **kwargs) -> LinearProbe | ProbeCollection:
+def logistic_probe(x: Any, y: Any, **kwargs: Any) -> LinearProbe | ProbeCollection:
     """Alias for logistic regression probe."""
     return sae_probe(x, y, **kwargs)
 
 
-def nelp_probe(x: Any, y: Any, **kwargs) -> LinearProbe | ProbeCollection:
+def nelp_probe(x: Any, y: Any, **kwargs: Any) -> LinearProbe | ProbeCollection:
     """Alias for NELP probe (logistic)."""
     return sae_probe(x, y, **kwargs)
 
 
-def dim_probe(x: Any, y: Any, **kwargs) -> LinearProbe | ProbeCollection:
+def dim_probe(x: Any, y: Any, **kwargs: Any) -> LinearProbe | ProbeCollection:
     """
     Difference-in-Means probe.
     """

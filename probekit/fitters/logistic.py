@@ -2,7 +2,9 @@
 Standard Logistic Regression Fitter.
 """
 
-import numpy as np
+from typing import Any
+
+from numpy.typing import NDArray
 from sklearn.linear_model import LogisticRegression, LogisticRegressionCV
 from sklearn.preprocessing import StandardScaler
 
@@ -10,14 +12,14 @@ from probekit.core.probe import LinearProbe, NormalizationStats
 
 
 def fit_logistic(
-    x: np.ndarray,
-    y: np.ndarray,
+    x: NDArray[Any],
+    y: NDArray[Any],
     c_param: float = 1.0,
     cv_folds: int | None = 5,
     normalize: bool = True,
     random_state: int = 42,
     max_iter: int = 1000,
-    **kwargs,
+    **kwargs: Any,
 ) -> LinearProbe:
     """
     Fit a standard L2-regularized Logistic Regression probe.

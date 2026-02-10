@@ -2,7 +2,10 @@
 Difference in Means (DiM) Fitter.
 """
 
+from typing import Any
+
 import numpy as np
+from numpy.typing import NDArray
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 
@@ -10,8 +13,8 @@ from probekit.core.probe import LinearProbe, NormalizationStats
 
 
 def fit_dim(
-    x: np.ndarray,
-    y: np.ndarray,
+    x: NDArray[Any],
+    y: NDArray[Any],
     normalize: bool = False,  # Generally DiM is done on raw or whitened data
     use_calibration: bool = True,  # Fit a 1D logistic regression on the projection
     random_state: int = 42,

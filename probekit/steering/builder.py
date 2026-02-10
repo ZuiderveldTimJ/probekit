@@ -27,11 +27,11 @@ DEFAULT_SAE_RELEASE = "gemma-scope-2b-pt-res-canonical"
 
 
 def build_steering_vector(
-    probe: LinearProbe | dict | NDArray | list,
+    probe: LinearProbe | dict[str, Any] | NDArray[Any] | list[Any],
     sae: SAE,
     layer: int,
     output_dir: Path | None = None,
-) -> dict:
+) -> dict[str, Any]:
     """Create steering vector from probe weights x SAE decoder directions.
 
     This V2 implementation primarily expects a `LinearProbe` object,
@@ -66,7 +66,7 @@ def build_steering_vector(
         if len(coeffs) == w_dec.shape[0]:
             # Dense weights in SAE space -> Projection
             steering_vector = torch.einsum("f,fh->h", coeffs, w_dec)
-            n_features_used = torch.count_nonzero(coeffs).item()
+            n_features_used = int(torch.count_nonzero(coeffs).item())
         else:
             # Mismatch? Maybe it's already in residual stream space?
             # If so, we can't use W_dec to project it.
@@ -94,12 +94,11 @@ def build_steering_vector(
             steering_vector += weight * w_dec[feat_id].float()
 
     # Case 3: Dense Vector / List
-    elif isinstance(probe, (np.ndarray, list, torch.Tensor)):
-        coeffs = (
-            torch.tensor(probe, device="cuda", dtype=torch.float32)
-            if not isinstance(probe, torch.Tensor)
-            else probe.to("cuda")
-        )
+    elif isinstance(probe, np.ndarray | list | torch.Tensor):
+        if not isinstance(probe, torch.Tensor):
+            coeffs = torch.tensor(probe, device="cuda", dtype=torch.float32)
+        else:
+            coeffs = probe.to("cuda")
 
         if len(coeffs) != w_dec.shape[0]:
             raise ValueError(f"Input vector shape {len(coeffs)} != SAE features {w_dec.shape[0]}")
@@ -140,7 +139,7 @@ def build_steering_vectors(
     probekit: list[LinearProbe] | Any,
     sae_model: Any,
     layers: list[int],
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """
     Batched version of build_steering_vector.
     Maps each probe to the corresponding layer.
@@ -171,7 +170,7 @@ def build_steering_vectors(
     return results
 
 
-def load_probe(probe_path: str | Path) -> tuple[dict, int, Path]:
+def load_probe(probe_path: str | Path) -> tuple[Any, int, Path]:
     """Load a probe and extract its layer and directory.
 
     Returns:
@@ -227,7 +226,7 @@ def load_probe(probe_path: str | Path) -> tuple[dict, int, Path]:
     return data, layer, probe_dir
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Build steering vector from probe")
     parser.add_argument("--probe", required=True, help="Path to probe JSON file")
     parser.add_argument("--sae-release", default=DEFAULT_SAE_RELEASE, help="SAE release")
@@ -250,6 +249,7 @@ def main():
         sae = SAE.from_pretrained(release=args.sae_release, sae_id=sae_id, device="cuda")
 
         # Hydrate LinearProbe if possible, else use raw dict
+        probe_obj: LinearProbe | dict[str, Any] | NDArray[Any] | list[Any]
         if isinstance(probe, dict) and "weights" in probe and "bias" in probe:
             probe_obj = LinearProbe.from_dict(probe)
         else:

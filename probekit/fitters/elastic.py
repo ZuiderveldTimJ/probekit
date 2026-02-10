@@ -2,7 +2,10 @@
 ElasticNet Fitter (Sparse Probes).
 """
 
+from typing import Any
+
 import numpy as np
+from numpy.typing import NDArray
 from sklearn.feature_selection import f_classif
 from sklearn.linear_model import ElasticNetCV
 from sklearn.preprocessing import StandardScaler
@@ -11,8 +14,8 @@ from probekit.core.probe import LinearProbe, NormalizationStats
 
 
 def fit_elastic_net(
-    x: np.ndarray,
-    y: np.ndarray,
+    x: NDArray[Any],
+    y: NDArray[Any],
     l1_ratios: list[float] | float | None = None,
     alphas: list[float] | None = None,
     cv_folds: int = 5,
@@ -21,7 +24,7 @@ def fit_elastic_net(
     positive: bool = False,
     random_state: int = 42,
     max_iter: int = 1000,
-    **kwargs,
+    **kwargs: Any,
 ) -> LinearProbe:
     """
     Fit an ElasticNet probe (sparse).

@@ -8,7 +8,7 @@ This library separates **Semantics** (the probe model) from **Fitting** (how it'
 
 ### 1. The Models: `LinearProbe` and `ProbeCollection`
 - **`LinearProbe`** (`probes.core.probe`): A container for a single probe (+ normalization stats).
-- **`ProbeCollection`** (`probes.core.collection`): A container for a **batch** of probes. 
+- **`ProbeCollection`** (`probes.core.collection`): A container for a **batch** of probes.
     - `to_tensor()`: Stacks weights into `[B, D]` and biases into `[B]`.
     - `best_layer(metric)`: Finds the probe with the best validation accuracy.
 
@@ -58,9 +58,8 @@ vecs = build_steering_vectors(probe_collection, sae_model, layers=[8, 9, 10])
 ## Structure
 
 - `probes/core/`: `LinearProbe` and `ProbeCollection` definitions.
-- `probes/fitters/`: 
+- `probes/fitters/`:
     - `logistic.py`, `elastic.py`, `dim.py`: Single-probe (CPU/sklearn) fitters.
     - `batch/`: Optimized GPU-batched fitters (IRLS, ISTA, DiM).
 - `probes/api.py`: High-level aliases and dimension routing.
 - `probes/steering/`: Tools for building steering vectors.
-

@@ -36,6 +36,7 @@ dev = [
     "mypy>=1.0.0",
     "build",
     "twine",
+    "pre-commit",
 ]
 
 [tool.setuptools.packages.find]
