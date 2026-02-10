@@ -17,19 +17,16 @@ from probekit.steering import build_steering_vector, build_steering_vectors, loa
 from probekit.utils.result import ProbeResult
 
 __all__ = [
-    # V2 (New)
     "LinearProbe",
-    "fit_logistic",
-    "fit_elastic_net",
-    "fit_dim",
-    # API Aliases
-    "sae_probe",
-    "nelp_probe",
-    "dim_probe",
-    "logistic_probe",
-    # Utilities
+    "ProbeResult",
     "build_steering_vector",
     "build_steering_vectors",
+    "dim_probe",
+    "fit_dim",
+    "fit_elastic_net",
+    "fit_logistic",
     "load_probe",
-    "ProbeResult",
+    "logistic_probe",
+    "nelp_probe",
+    "sae_probe",
 ]

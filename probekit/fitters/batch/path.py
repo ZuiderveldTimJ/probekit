@@ -22,7 +22,7 @@ def fit_elastic_net_path(
     """
     Fits elastic net probekit across a path of alpha values with warm starting.
     """
-    n_batch, n, d = x.shape
+    n_batch, n, _ = x.shape
     device = x.device
 
     if y.ndim == 1:

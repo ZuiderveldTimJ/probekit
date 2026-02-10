@@ -46,10 +46,12 @@ exclude = ["probekit.tests*"]
 [tool.ruff]
 line-length = 120
 target-version = "py310"
-select = ["E", "F", "I", "W", "UP", "B", "PL", "RUF"]
-ignore = ["PLR0913", "PLR2004", "PLR0912"] # Ignore too many arguments, magic values, and branches
 
-[tool.ruff.isort]
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B", "PL", "RUF"]
+ignore = ["PLR0913", "PLR2004", "PLR0912", "PLR0915"] # Ignore too many args, magic values, branches, and statements
+
+[tool.ruff.lint.isort]
 known-first-party = ["probekit"]
 
 [tool.mypy]
