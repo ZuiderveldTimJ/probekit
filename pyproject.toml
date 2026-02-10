@@ -21,6 +21,14 @@ dependencies = [
     "sae-lens>=3.0.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/ZuiderveldTimJ/probekit"
+Repository = "https://github.com/ZuiderveldTimJ/probekit"
+Issues = "https://github.com/ZuiderveldTimJ/probekit/issues"
+
+[project.scripts]
+probekit-steering = "probekit.steering.builder:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",
