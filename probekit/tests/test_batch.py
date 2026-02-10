@@ -42,3 +42,11 @@ def test_fit_elastic_net_batch(batch_data: tuple[torch.Tensor, torch.Tensor]) ->
     collection = fit_elastic_net_batch(x, y, max_iter=5)
     assert isinstance(collection, ProbeCollection)
     assert len(collection.probekit) == x.shape[0]
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
+def test_fit_elastic_net_batch_positive(batch_data: tuple[torch.Tensor, torch.Tensor]) -> None:
+    x, y = batch_data
+    collection = fit_elastic_net_batch(x, y, max_iter=5, positive=True)
+    weights, _ = collection.to_tensor()
+    assert torch.all(weights >= -1e-7)

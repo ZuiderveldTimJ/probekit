@@ -3,6 +3,7 @@ from typing import Union, overload
 
 import numpy as np
 import torch
+from numpy.typing import NDArray
 
 from .probe import LinearProbe
 
@@ -34,6 +35,36 @@ class ProbeCollection:
 
     def __iter__(self) -> Iterator[LinearProbe]:
         return iter(self.probekit)
+
+    def predict_score(self, x: NDArray[np.float32] | torch.Tensor) -> NDArray[np.float32]:
+        """
+        Predict scores for all probes.
+        Supports x as [N, D] (same data for every probe) or [B, N, D] (per-probe data).
+        Returns [B, N] scores.
+        """
+        if isinstance(x, torch.Tensor):
+            x = x.detach().cpu().numpy()
+
+        batch_size = len(self.probekit)
+        if x.ndim == 2:
+            scores = [probe.predict_score(x) for probe in self.probekit]
+        elif x.ndim == 3:
+            if x.shape[0] != batch_size:
+                raise ValueError(f"Expected x batch dimension {batch_size}, got {x.shape[0]}.")
+            scores = [probe.predict_score(x[i]) for i, probe in enumerate(self.probekit)]
+        else:
+            raise ValueError(f"Expected x with 2 or 3 dims, got {x.ndim}.")
+
+        return np.stack(scores, axis=0).astype(np.float32)
+
+    def predict(self, x: NDArray[np.float32] | torch.Tensor, threshold: float = 0.0) -> NDArray[np.int32]:
+        """
+        Predict binary classes for all probes.
+        Supports x as [N, D] (same data for every probe) or [B, N, D] (per-probe data).
+        Returns [B, N] predictions.
+        """
+        scores = self.predict_score(x)
+        return (scores > threshold).astype(np.int32)
 
     def to_tensor(self) -> tuple[torch.Tensor, torch.Tensor]:
         """

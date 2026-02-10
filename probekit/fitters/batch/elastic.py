@@ -26,6 +26,7 @@ def fit_elastic_net_batch(
     val_y: Tensor | None = None,
     w_init: Tensor | None = None,
     b_init: Tensor | None = None,
+    positive: bool = False,
 ) -> ProbeCollection:
     """
     x: [b, n, d]
@@ -34,6 +35,7 @@ def fit_elastic_net_batch(
     l1_ratio: mix between L1 (1.0) and L2 (0.0)
     w_init: [b, d] optional initial weights
     b_init: [b] optional initial bias
+    positive: force non-negative coefficients
     Returns: list of b LinearProbe objects
 
     Algorithm: Proximal Gradient Descent (ISTA/FISTA)
@@ -136,6 +138,8 @@ def fit_elastic_net_batch(
         # threshold = step * l1_strength
         threshold = step_size * l1_strength
         w = soft_threshold(w_candidate, threshold)
+        if positive:
+            w = torch.clamp(w, min=0.0)
 
         # Convergence check
         change = torch.max(torch.abs(w - w_prev))

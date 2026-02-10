@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 from numpy.typing import NDArray
 
+from probekit.core.collection import ProbeCollection
 from probekit.core.probe import LinearProbe, NormalizationStats
 from probekit.fitters.dim import fit_dim
 from probekit.fitters.elastic import fit_elastic_net
@@ -98,3 +99,36 @@ class TestFitters:
         probe = fit_dim(x, y)
         assert isinstance(probe, LinearProbe)
         assert probe.weights.shape == (50,)
+
+
+class TestProbeCollection:
+    def test_predict_with_shared_input(self) -> None:
+        probe_a = LinearProbe(weights=np.array([1.0, 0.0], dtype=np.float32), bias=0.0)
+        probe_b = LinearProbe(weights=np.array([0.0, 1.0], dtype=np.float32), bias=0.0)
+        collection = ProbeCollection([probe_a, probe_b])
+
+        x = np.array([[1.0, -1.0], [-1.0, 1.0]], dtype=np.float32)
+        scores = collection.predict_score(x)
+        preds = collection.predict(x)
+
+        assert scores.shape == (2, 2)
+        assert preds.shape == (2, 2)
+        assert np.array_equal(preds[0], np.array([1, 0], dtype=np.int32))
+        assert np.array_equal(preds[1], np.array([0, 1], dtype=np.int32))
+
+    def test_predict_with_batched_input(self) -> None:
+        probe_a = LinearProbe(weights=np.array([1.0, 0.0], dtype=np.float32), bias=0.0)
+        probe_b = LinearProbe(weights=np.array([0.0, 1.0], dtype=np.float32), bias=0.0)
+        collection = ProbeCollection([probe_a, probe_b])
+
+        x = np.array(
+            [
+                [[1.0, -1.0], [-1.0, 1.0]],
+                [[-1.0, 1.0], [1.0, -1.0]],
+            ],
+            dtype=np.float32,
+        )
+        preds = collection.predict(x)
+        assert preds.shape == (2, 2)
+        assert np.array_equal(preds[0], np.array([1, 0], dtype=np.int32))
+        assert np.array_equal(preds[1], np.array([1, 0], dtype=np.int32))
