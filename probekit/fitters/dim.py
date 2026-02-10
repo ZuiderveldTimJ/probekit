@@ -2,7 +2,6 @@
 Difference in Means (DiM) Fitter.
 """
 
-
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
@@ -14,7 +13,7 @@ def fit_dim(
     x: np.ndarray,
     y: np.ndarray,
     normalize: bool = False,  # Generally DiM is done on raw or whitened data
-    use_calibration: bool = True, # Fit a 1D logistic regression on the projection
+    use_calibration: bool = True,  # Fit a 1D logistic regression on the projection
     random_state: int = 42,
 ) -> LinearProbe:
     """
@@ -44,8 +43,8 @@ def fit_dim(
         )
 
     # 2. Compute Means
-    pos_mask = (y == 1)
-    neg_mask = (y == 0)
+    pos_mask = y == 1
+    neg_mask = y == 0
 
     mu_pos = x[pos_mask].mean(axis=0)
     mu_neg = x[neg_mask].mean(axis=0)

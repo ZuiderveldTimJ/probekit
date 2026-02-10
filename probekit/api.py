@@ -11,15 +11,17 @@ from .fitters.dim import fit_dim
 from .fitters.logistic import fit_logistic
 
 
-def _ensure_tensor(x: Any, device: str = 'cuda') -> torch.Tensor:
+def _ensure_tensor(x: Any, device: str = "cuda") -> torch.Tensor:
     if not isinstance(x, torch.Tensor):
         return torch.tensor(x, device=device)
-    return x.to(device) # Ensure on device
+    return x.to(device)  # Ensure on device
+
 
 def _ensure_numpy(x: Any) -> np.ndarray:
     if isinstance(x, torch.Tensor):
         return x.detach().cpu().numpy()
     return np.array(x)
+
 
 def sae_probe(x: Any, y: Any, **kwargs) -> LinearProbe | ProbeCollection:
     """
@@ -47,13 +49,16 @@ def sae_probe(x: Any, y: Any, **kwargs) -> LinearProbe | ProbeCollection:
         # fit_logistic usually takes sklearn-style (numpy).
         return fit_logistic(x, y, **kwargs)
 
+
 def logistic_probe(x: Any, y: Any, **kwargs) -> LinearProbe | ProbeCollection:
     """Alias for logistic regression probe."""
     return sae_probe(x, y, **kwargs)
 
+
 def nelp_probe(x: Any, y: Any, **kwargs) -> LinearProbe | ProbeCollection:
     """Alias for NELP probe (logistic)."""
     return sae_probe(x, y, **kwargs)
+
 
 def dim_probe(x: Any, y: Any, **kwargs) -> LinearProbe | ProbeCollection:
     """

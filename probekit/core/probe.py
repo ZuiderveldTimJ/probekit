@@ -17,6 +17,7 @@ from numpy.typing import NDArray
 @dataclass
 class NormalizationStats:
     """Statistics for input normalization."""
+
     mean: NDArray[np.float64]
     std: NDArray[np.float64]
     count: int

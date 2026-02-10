@@ -2,7 +2,6 @@
 Standard Logistic Regression Fitter.
 """
 
-
 import numpy as np
 from sklearn.linear_model import LogisticRegression, LogisticRegressionCV
 from sklearn.preprocessing import StandardScaler

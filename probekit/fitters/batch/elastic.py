@@ -13,6 +13,7 @@ def soft_threshold(x: Tensor, lambd: Tensor | float) -> Tensor:
     """
     return torch.sign(x) * torch.clamp(torch.abs(x) - lambd, min=0.0)
 
+
 def fit_elastic_net_batch(
     x: Tensor,
     y: Tensor,
@@ -45,11 +46,11 @@ def fit_elastic_net_batch(
 
     # Normalization
     if normalize:
-        mu, sigma = fit_normalization(x) # [b, d]
+        mu, sigma = fit_normalization(x)  # [b, d]
         # x: [b, n, d]
         x_norm = (x - mu.unsqueeze(1)) / sigma.unsqueeze(1)
         if val_x is not None:
-             val_x_norm = (val_x - mu.unsqueeze(1)) / sigma.unsqueeze(1)
+            val_x_norm = (val_x - mu.unsqueeze(1)) / sigma.unsqueeze(1)
     else:
         x_norm = x
         mu = torch.zeros(n_batch, d, device=device)
@@ -66,15 +67,15 @@ def fit_elastic_net_batch(
     # Initialize parameters
     if w_init is not None:
         if w_init.shape != (n_batch, d):
-             # Handle shape mismatch if needed or assume caller handles it
-             # Warm start usually implies same shape
-             pass
+            # Handle shape mismatch if needed or assume caller handles it
+            # Warm start usually implies same shape
+            pass
         w = w_init.clone().to(device=device, dtype=x.dtype)
     else:
         w = torch.zeros(n_batch, d, device=device, dtype=x.dtype)
 
     if b_init is not None:
-         b = b_init.clone().to(device=device, dtype=x.dtype)
+        b = b_init.clone().to(device=device, dtype=x.dtype)
     else:
         b = torch.zeros(n_batch, device=device, dtype=x.dtype)
 
@@ -101,10 +102,10 @@ def fit_elastic_net_batch(
     # So lipschitz_l <= 0.25 * ||x||_f_sq / n (if 1/n factor in loss, which we used in gradient?)
     # Wait, gradient is usually 1/n * x^T (y-p). Yes.
 
-    x_frob_sq = torch.sum(x_norm ** 2, dim=(1,2)) # [n_batch]
+    x_frob_sq = torch.sum(x_norm**2, dim=(1, 2))  # [n_batch]
     lipschitz_l = x_frob_sq / (4.0 * n)
-    step_size = 1.0 / (lipschitz_l + l2_strength + 1e-6) # [n_batch]
-    step_size = step_size.unsqueeze(1) # [n_batch, 1] for broadcasting to w
+    step_size = 1.0 / (lipschitz_l + l2_strength + 1e-6)  # [n_batch]
+    step_size = step_size.unsqueeze(1)  # [n_batch, 1] for broadcasting to w
 
     # Optimization Loop
     for _i in range(max_iter):
@@ -120,11 +121,11 @@ def fit_elastic_net_batch(
         # grad_w = 1/n * x^T (p - y) + l2 * w
         # grad_b = 1/n * sum (p - y)
 
-        err = p - y # [b, n]
-        grad_w = torch.bmm(x_norm.transpose(1, 2), err.unsqueeze(-1)).squeeze(-1) / n # [b, d]
+        err = p - y  # [b, n]
+        grad_w = torch.bmm(x_norm.transpose(1, 2), err.unsqueeze(-1)).squeeze(-1) / n  # [b, d]
         grad_w += l2_strength * w
 
-        grad_b = err.mean(dim=1) # [b]
+        grad_b = err.mean(dim=1)  # [b]
 
         # 3. Update
         # w_candidate = w - step * grad_w
@@ -164,15 +165,13 @@ def fit_elastic_net_batch(
         if val_accs is not None:
             meta["val_accuracy"] = val_accs[i]
 
-        probekit.append(LinearProbe(
-            weights=weights_cpu[i],
-            bias=bias_cpu[i].item(),
-            normalization=NormalizationStats(
-                mean=mu_cpu[i],
-                std=sigma_cpu[i],
-                count=n
-            ) if normalize else None,
-            metadata=meta
-        ))
+        probekit.append(
+            LinearProbe(
+                weights=weights_cpu[i],
+                bias=bias_cpu[i].item(),
+                normalization=NormalizationStats(mean=mu_cpu[i], std=sigma_cpu[i], count=n) if normalize else None,
+                metadata=meta,
+            )
+        )
 
     return ProbeCollection(probekit)

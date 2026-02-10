@@ -26,6 +26,8 @@ dev = [
     "pytest>=7.0.0",
     "ruff>=0.1.0",
     "mypy>=1.0.0",
+    "build",
+    "twine",
 ]
 
 [tool.setuptools.packages.find]
@@ -33,10 +35,17 @@ where = ["."]
 include = ["probekit*"]
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 target-version = "py310"
+select = ["E", "F", "I", "W", "UP", "B", "PL", "RUF"]
+ignore = ["PLR0913", "PLR2004", "PLR0912"] # Ignore too many arguments, magic values, and branches
+
+[tool.ruff.isort]
+known-first-party = ["probekit"]
 
 [tool.mypy]
 python_version = "3.10"
+strict = true
 ignore_missing_imports = true
-check_untyped_defs = true
+warn_unused_configs = true
+disallow_untyped_defs = true

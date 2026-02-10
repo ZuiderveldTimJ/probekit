@@ -39,10 +39,10 @@ def fit_dim_batch(x: Tensor, y: Tensor, normalize: bool = True) -> ProbeCollecti
     # sum_1 = (X * y.unsqueeze(-1)).sum(dim=1)
     # count_1 = y.sum(dim=1).unsqueeze(-1)
 
-    y_expanded = y.unsqueeze(-1) # [b, n, 1]
+    y_expanded = y.unsqueeze(-1)  # [b, n, 1]
 
-    sum_1 = (x * y_expanded).sum(dim=1) # [b, d]
-    count_1 = y_expanded.sum(dim=1) # [b, 1]
+    sum_1 = (x * y_expanded).sum(dim=1)  # [b, d]
+    count_1 = y_expanded.sum(dim=1)  # [b, 1]
     mean_1 = sum_1 / count_1.clamp(min=1.0)
 
     sum_0 = (x * (1 - y_expanded)).sum(dim=1)
@@ -50,7 +50,7 @@ def fit_dim_batch(x: Tensor, y: Tensor, normalize: bool = True) -> ProbeCollecti
     mean_0 = sum_0 / count_0.clamp(min=1.0)
 
     # 2. Weights
-    w = mean_1 - mean_0 # [b, d]
+    w = mean_1 - mean_0  # [b, d]
 
     # 3. Bias and Normalization
     probekit = []
@@ -60,14 +60,14 @@ def fit_dim_batch(x: Tensor, y: Tensor, normalize: bool = True) -> ProbeCollecti
     # The spec says: "Normalize x, compute bias via median threshold on normalized scores"
 
     if normalize:
-        mu, sigma = fit_normalization(x) # [b, d]
+        mu, sigma = fit_normalization(x)  # [b, d]
     else:
         mu = torch.zeros(n_batch, d, device=device)
         sigma = torch.ones(n_batch, d, device=device)
 
     for i in range(n_batch):
         # Extract for this batch
-        wi = w[i] # [D]
+        wi = w[i]  # [D]
         mui = mu[i]
         sigmai = sigma[i]
 
@@ -77,7 +77,7 @@ def fit_dim_batch(x: Tensor, y: Tensor, normalize: bool = True) -> ProbeCollecti
         # Actually, standard DiM often sets bias = -(mean1 + mean0)/2 @ w  (midpoint)
         # But the spec says "median threshold".
 
-        xi = x[i] # [n, d]
+        xi = x[i]  # [n, d]
         # Normalize
         xi_norm = (xi - mui) / sigmai
         scores = xi_norm @ wi
@@ -89,12 +89,10 @@ def fit_dim_batch(x: Tensor, y: Tensor, normalize: bool = True) -> ProbeCollecti
         probe = LinearProbe(
             weights=wi.cpu().numpy(),
             bias=b.item(),
-            normalization=NormalizationStats(
-                mean=mui.cpu().numpy(),
-                std=sigmai.cpu().numpy(),
-                count=n
-            ) if normalize else None,
-            metadata={"fit_method": "dim_batch"}
+            normalization=NormalizationStats(mean=mui.cpu().numpy(), std=sigmai.cpu().numpy(), count=n)
+            if normalize
+            else None,
+            metadata={"fit_method": "dim_batch"},
         )
         probekit.append(probe)
 

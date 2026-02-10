@@ -22,13 +22,11 @@ __all__ = [
     "fit_logistic",
     "fit_elastic_net",
     "fit_dim",
-
     # API Aliases
     "sae_probe",
     "nelp_probe",
     "dim_probe",
     "logistic_probe",
-
     # Utilities
     "build_steering_vector",
     "build_steering_vectors",

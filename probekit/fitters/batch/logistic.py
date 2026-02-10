@@ -42,7 +42,7 @@ def fit_logistic_batch(
 
         # Validation normalization
         if val_x is not None:
-             val_x_norm = (val_x - mu.unsqueeze(1)) / sigma.unsqueeze(1)
+            val_x_norm = (val_x - mu.unsqueeze(1)) / sigma.unsqueeze(1)
     else:
         x_norm = x
         if val_x is not None:
@@ -53,7 +53,7 @@ def fit_logistic_batch(
 
     # Add bias term to x: concate 1s -> [b, n, d+1]
     ones = torch.ones(n_batch, n, 1, device=device, dtype=x.dtype)
-    x_aug = torch.cat([x_norm, ones], dim=2) # [b, n, d+1]
+    x_aug = torch.cat([x_norm, ones], dim=2)  # [b, n, d+1]
 
     # Initialize weights: [b, d+1]
     w = torch.zeros(n_batch, d + 1, device=device, dtype=x.dtype)
@@ -68,7 +68,7 @@ def fit_logistic_batch(
     # Identity matrix for regularization [b, d+1, d+1]
     # Diag is 1 for weights, 0 for bias
     i_reg = torch.eye(d + 1, device=device).unsqueeze(0).expand(n_batch, -1, -1).clone()
-    i_reg[:, d, d] = 0.0 # No regularization on bias
+    i_reg[:, d, d] = 0.0  # No regularization on bias
 
     # Optimization Loop (IRLS)
     for _i in range(max_iter):
@@ -76,13 +76,13 @@ def fit_logistic_batch(
 
         # 1. Predictions
         # logits = x @ w: [b, n, d+1] @ [b, d+1, 1] -> [b, n, 1]
-        logits = torch.bmm(x_aug, w.unsqueeze(-1)).squeeze(-1) # [b, n]
+        logits = torch.bmm(x_aug, w.unsqueeze(-1)).squeeze(-1)  # [b, n]
         p = torch.sigmoid(logits)
 
         # 2. Weights r = p * (1-p)
         # Clamp for stability
         p_clamped = torch.clamp(p, 1e-7, 1.0 - 1e-7)
-        r = p_clamped * (1.0 - p_clamped) # [B, N]
+        r = p_clamped * (1.0 - p_clamped)  # [B, N]
 
         # 3. Working response z
         # z = Xw + (y - p) / r
@@ -98,10 +98,10 @@ def fit_logistic_batch(
         # Scale x by sqrt(r): x_scaled = x * sqrt(r)
         # Then x^T R x = x_scaled^T x_scaled
 
-        sqrt_r = torch.sqrt(r).unsqueeze(-1) # [b, n, 1]
-        x_scaled = x_aug * sqrt_r # [b, n, d+1]
+        sqrt_r = torch.sqrt(r).unsqueeze(-1)  # [b, n, 1]
+        x_scaled = x_aug * sqrt_r  # [b, n, d+1]
 
-        h = torch.bmm(x_scaled.transpose(1, 2), x_scaled) # [b, d+1, d+1]
+        h = torch.bmm(x_scaled.transpose(1, 2), x_scaled)  # [b, d+1, d+1]
 
         # Add regularization
         h = h + lambda_reg * i_reg
@@ -125,11 +125,11 @@ def fit_logistic_batch(
         # Gradient of Penalty = lambda * w (0 for bias)
         # Total Gradient = X^T (y - p) - lambda * w_reg
 
-        residual = y - p # [b, n]
-        grad_data = torch.bmm(x_aug.transpose(1, 2), residual.unsqueeze(-1)).squeeze(-1) # [b, d+1]
+        residual = y - p  # [b, n]
+        grad_data = torch.bmm(x_aug.transpose(1, 2), residual.unsqueeze(-1)).squeeze(-1)  # [b, d+1]
 
         w_reg = w.clone()
-        w_reg[:, d] = 0.0 # Don't penalize bias
+        w_reg[:, d] = 0.0  # Don't penalize bias
         grad_total = grad_data - lambda_reg * w_reg
 
         # Solve h * delta = grad_total
@@ -143,9 +143,9 @@ def fit_logistic_batch(
         except RuntimeError:
             # Fallback or break?
             # Could use lstsq
-             delta = torch.linalg.lstsq(h_damped, grad_total).solution
+            delta = torch.linalg.lstsq(h_damped, grad_total).solution
 
-        w = w + delta # Step size 1.0 (Newton)
+        w = w + delta  # Step size 1.0 (Newton)
 
         # Check convergence
         change = torch.max(torch.abs(w - w_prev))
@@ -169,7 +169,7 @@ def fit_logistic_batch(
 
         logits_val = torch.bmm(val_x_norm, weights.unsqueeze(-1)).squeeze(-1) + bias.unsqueeze(1)
         preds_val = (logits_val > 0).float()
-        accs = (preds_val == val_y).float().mean(dim=1) # [b]
+        accs = (preds_val == val_y).float().mean(dim=1)  # [b]
         val_accs = accs.cpu().numpy()
 
     mu_cpu = mu.cpu().numpy()
@@ -182,15 +182,13 @@ def fit_logistic_batch(
         if val_accs is not None:
             meta["val_accuracy"] = val_accs[i]
 
-        probekit.append(LinearProbe(
-            weights=weights_cpu[i],
-            bias=bias_cpu[i].item(),
-            normalization=NormalizationStats(
-                mean=mu_cpu[i],
-                std=sigma_cpu[i],
-                count=n
-            ) if normalize else None,
-            metadata=meta
-        ))
+        probekit.append(
+            LinearProbe(
+                weights=weights_cpu[i],
+                bias=bias_cpu[i].item(),
+                normalization=NormalizationStats(mean=mu_cpu[i], std=sigma_cpu[i], count=n) if normalize else None,
+                metadata=meta,
+            )
+        )
 
     return ProbeCollection(probekit)

@@ -2,7 +2,6 @@
 ElasticNet Fitter (Sparse Probes).
 """
 
-
 import numpy as np
 from sklearn.feature_selection import f_classif
 from sklearn.linear_model import ElasticNetCV
@@ -79,9 +78,9 @@ def fit_elastic_net(
                 global_std[selected_indices] = scaler.scale_
         else:
             # If no selection, x_train is x
-             if scaler.mean_ is not None:
+            if scaler.mean_ is not None:
                 global_mean[:] = scaler.mean_
-             if scaler.scale_ is not None:
+            if scaler.scale_ is not None:
                 global_std[:] = scaler.scale_
 
         norm_stats = NormalizationStats(

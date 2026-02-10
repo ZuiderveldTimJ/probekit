@@ -27,6 +27,7 @@ def fit_normalization(x: Tensor) -> tuple[Tensor, Tensor]:
 
     return mu, sigma
 
+
 def apply_normalization(x: Tensor, mu: Tensor, sigma: Tensor) -> Tensor:
     """Subtract mu, divide by sigma. Handles broadcasting for batched case."""
     # If x is 3D [b, n, d] and mu/sigma are [b, d], we need to unsqueeze mu/sigma to [b, 1, d]

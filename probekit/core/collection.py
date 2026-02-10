@@ -12,6 +12,7 @@ class ProbeCollection:
     A thin wrapper around a list of LinearProbe objects.
     Provides utility methods for batch operations and analysis.
     """
+
     def __init__(self, probekit: list[LinearProbe]):
         self.probekit = probekit
 
@@ -43,24 +44,24 @@ class ProbeCollection:
         # The LinearProbe stores weights as numpy arrays usually.
 
         # Stack
-        w_stacked = np.stack(weights_list) # [B, D]
-        b_stacked = np.array(biases_list)   # [B]
+        w_stacked = np.stack(weights_list)  # [B, D]
+        b_stacked = np.array(biases_list)  # [B]
 
         return torch.from_numpy(w_stacked).float(), torch.from_numpy(b_stacked).float()
 
-    def best_layer(self, metric: str = 'val_accuracy') -> tuple[int, LinearProbe]:
+    def best_layer(self, metric: str = "val_accuracy") -> tuple[int, LinearProbe]:
         """
         Returns (layer_index, probe) for the probe with the highest value of the given metric.
         Raises KeyError if metric is missing in any probe's metadata.
         """
         best_idx = -1
-        best_val = -float('inf')
+        best_val = -float("inf")
 
         for i, probe in enumerate(self.probekit):
             if metric not in probe.metadata:
-                continue # Or raise? "Thin" usually means simple. Let's start with skipping or erroring?
-                         # The requirement says "highest value... in probe.metadata".
-                         # Let's assume usage is consistent.
+                continue  # Or raise? "Thin" usually means simple. Let's start with skipping or erroring?
+                # The requirement says "highest value... in probe.metadata".
+                # Let's assume usage is consistent.
 
             val = probe.metadata[metric]
             if val > best_val:

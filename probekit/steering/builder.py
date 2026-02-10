@@ -1,13 +1,14 @@
 """
 Steering Vector Builder (V2).
 
-Creates steering vectors from probe weights × SAE decoder directions.
+Creates steering vectors from probe weights x SAE decoder directions.
 Can be used standalone or imported by other scripts.
 """
 
 import argparse
 import json
 import logging
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -85,7 +86,7 @@ def build_steering_vector(
         n_features_used = len(features)
 
         if len(features) != len(weights):
-             raise ValueError(f"Length mismatch: {len(features)} features vs {len(weights)} weights.")
+            raise ValueError(f"Length mismatch: {len(features)} features vs {len(weights)} weights.")
 
         for feat_id, weight in zip(features, weights, strict=True):
             if feat_id >= w_dec.shape[0]:
@@ -94,7 +95,11 @@ def build_steering_vector(
 
     # Case 3: Dense Vector / List
     elif isinstance(probe, (np.ndarray, list, torch.Tensor)):
-        coeffs = torch.tensor(probe, device="cuda", dtype=torch.float32) if not isinstance(probe, torch.Tensor) else probe.to("cuda")
+        coeffs = (
+            torch.tensor(probe, device="cuda", dtype=torch.float32)
+            if not isinstance(probe, torch.Tensor)
+            else probe.to("cuda")
+        )
 
         if len(coeffs) != w_dec.shape[0]:
             raise ValueError(f"Input vector shape {len(coeffs)} != SAE features {w_dec.shape[0]}")
@@ -129,6 +134,7 @@ def build_steering_vector(
         logger.info(f"Saved steering vector to {output_path}")
 
     return data
+
 
 def build_steering_vectors(
     probekit: list[LinearProbe] | Any,
@@ -229,7 +235,7 @@ def main():
     args = parser.parse_args()
 
     # Configure logging for CLI usage
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
     try:
         # Load probe
@@ -245,9 +251,9 @@ def main():
 
         # Hydrate LinearProbe if possible, else use raw dict
         if isinstance(probe, dict) and "weights" in probe and "bias" in probe:
-             probe_obj = LinearProbe.from_dict(probe)
+            probe_obj = LinearProbe.from_dict(probe)
         else:
-             probe_obj = probe
+            probe_obj = probe
 
         # Build vector
         data = build_steering_vector(probe_obj, sae, layer, output_dir)
@@ -255,7 +261,7 @@ def main():
 
     except Exception as e:
         logger.error(f"Failed to build steering vector: {e}")
-        exit(1)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

@@ -15,6 +15,7 @@ class _IndexList(list[int]):
     def tolist(self) -> list[int]:
         return list(self)
 
+
 @dataclass
 class ProbeResult:
     """Results from training a NELP probe."""
@@ -31,7 +32,7 @@ class ProbeResult:
     layer: int | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         sparse_neurons_arr = np.asarray(self.sparse_neurons, dtype=np.int64)
         self.sparse_neurons = _IndexList(int(i) for i in sparse_neurons_arr.tolist())
         self.coefficients = np.asarray(self.coefficients, dtype=np.float64)
@@ -64,7 +65,7 @@ class ProbeResult:
         order = np.argsort(np.abs(weights))[::-1]
         return [(int(indices[i]), float(weights[i])) for i in order]
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
         sparse_neurons = list(self.sparse_neurons)
         coefficients = np.asarray(self.coefficients, dtype=np.float64)
@@ -82,7 +83,7 @@ class ProbeResult:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "ProbeResult":
+    def from_dict(cls, data: dict[str, Any]) -> "ProbeResult":
         """Create from dictionary."""
         return cls(
             accuracy=data["accuracy"],

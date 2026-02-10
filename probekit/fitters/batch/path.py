@@ -17,7 +17,7 @@ def fit_elastic_net_path(
     normalize: bool = True,
     val_x: Tensor | None = None,
     val_y: Tensor | None = None,
-    select: str = 'best_val',  # 'best_val' or 'all'
+    select: str = "best_val",  # 'best_val' or 'all'
 ) -> ProbeCollection | list[ProbeCollection]:
     """
     Fits elastic net probekit across a path of alpha values with warm starting.
@@ -46,9 +46,9 @@ def fit_elastic_net_path(
 
         # score = |x^T (y - y_mean)|
         residual = y - y_mean
-        grad = torch.bmm(x_eff.transpose(1, 2), residual.unsqueeze(-1)).squeeze(-1) # [b, d]
+        grad = torch.bmm(x_eff.transpose(1, 2), residual.unsqueeze(-1)).squeeze(-1)  # [b, d]
         grad_abs = torch.abs(grad)
-        max_grad = grad_abs.max().item() # Global max over batch? Or per batch?
+        max_grad = grad_abs.max().item()  # Global max over batch? Or per batch?
         # We usually want one path for all, or per-batch paths?
         # Using one path for the whole batch is simpler. Use max over batch.
 
@@ -59,7 +59,7 @@ def fit_elastic_net_path(
     # Sort alphas high to low
     alphas = sorted(alphas, reverse=True)
 
-    path_results = [] # List of ProbeCollections
+    path_results = []  # List of ProbeCollections
 
     # Warm start weights
     # Note: fit_elastic_net_batch currently doesn't accept init_weights.
@@ -84,12 +84,18 @@ def fit_elastic_net_path(
         # Collection stores probekit, so we can extract.
 
         col = fit_elastic_net_batch(
-            x, y, alpha=alpha, l1_ratio=l1_ratio,
-            normalize=normalize, val_x=val_x, val_y=val_y,
-            max_iter=100 if w_init is not None else 500, # Faster if warm
+            x,
+            y,
+            alpha=alpha,
+            l1_ratio=l1_ratio,
+            normalize=normalize,
+            val_x=val_x,
+            val_y=val_y,
+            max_iter=100 if w_init is not None else 500,  # Faster if warm
             # We need to pass w_init.
             # I will add **kwargs to fit_elastic_net_batch or update signature.
-            w_init=w_init, b_init=b_init
+            w_init=w_init,
+            b_init=b_init,
         )
         path_results.append(col)
 
@@ -98,10 +104,10 @@ def fit_elastic_net_path(
         w_init = w_init.to(device)
         b_init = b_init.to(device)
 
-    if select == 'all':
+    if select == "all":
         return path_results
 
-    if select == 'best_val':
+    if select == "best_val":
         # Pick best alpha per batch element
         if val_x is None:
             # Fallback to last (lowest alpha) or raise?
@@ -119,7 +125,7 @@ def fit_elastic_net_path(
 
             for _col_idx, col in enumerate(path_results):
                 p = col[i]
-                acc = p.metadata.get('val_accuracy', -1.0)
+                acc = p.metadata.get("val_accuracy", -1.0)
                 if acc > best_acc:
                     best_acc = acc
                     best_p = p
@@ -127,11 +133,11 @@ def fit_elastic_net_path(
             # If no val acc found (e.g. -1 for all), pick last (least regularized)
             if best_p is None and best_acc == -1.0:
                 best_p = path_results[-1][i]
-            elif best_p is None: # Should not happen if loop runs
+            elif best_p is None:  # Should not happen if loop runs
                 best_p = path_results[-1][i]
 
             best_probes.append(best_p)
 
         return ProbeCollection(best_probes)
 
-    return path_results[-1] # Fallback
+    return path_results[-1]  # Fallback
