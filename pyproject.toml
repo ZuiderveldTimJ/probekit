@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=61.0", "setuptools-scm>=8", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "probekit"
-version = "0.1.0"
+dynamic = ["version"]
 description = "A versatile kit for training and using linear probes on neural network activations."
 readme = "README.md"
 license = {text = "MIT"}
@@ -43,6 +43,11 @@ dev = [
 where = ["."]
 include = ["probekit*"]
 exclude = ["probekit.tests*"]
+
+[tool.setuptools_scm]
+write_to = "probekit/_version.py"
+fallback_version = "0.0.0"
+local_scheme = "no-local-version"
 
 [tool.ruff]
 line-length = 120
