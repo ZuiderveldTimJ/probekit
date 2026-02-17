@@ -67,17 +67,19 @@ def fit_elastic_net_batch(
     l2_strength = alpha * (1.0 - l1_ratio)
 
     # Initialize parameters
+    # Use .to() which returns a new tensor if device/dtype differ, or a no-op view if same.
+    # detach() ensures we don't carry gradients from caller without an expensive clone().
     if w_init is not None:
         if w_init.shape != (n_batch, d):
             # Handle shape mismatch if needed or assume caller handles it
             # Warm start usually implies same shape
             pass
-        w = w_init.clone().to(device=device, dtype=x.dtype)
+        w = w_init.detach().to(device=device, dtype=x.dtype, copy=True)
     else:
         w = torch.zeros(n_batch, d, device=device, dtype=x.dtype)
 
     if b_init is not None:
-        b = b_init.clone().to(device=device, dtype=x.dtype)
+        b = b_init.detach().to(device=device, dtype=x.dtype, copy=True)
     else:
         b = torch.zeros(n_batch, device=device, dtype=x.dtype)
 
@@ -109,9 +111,11 @@ def fit_elastic_net_batch(
     step_size = 1.0 / (lipschitz_l + l2_strength + 1e-6)  # [n_batch]
     step_size = step_size.unsqueeze(1)  # [n_batch, 1] for broadcasting to w
 
+    # Pre-squeeze step_size for bias updates
+    step_size_scalar = step_size.squeeze(1)  # [n_batch]
+
     # Optimization Loop
     for _i in range(max_iter):
-        w_prev = w.clone()
 
         # 1. Forward
         # [b, n, d] @ [b, d, 1] -> [b, n]
@@ -132,17 +136,18 @@ def fit_elastic_net_batch(
         # 3. Update
         # w_candidate = w - step * grad_w
         w_candidate = w - step_size * grad_w
-        b = b - step_size.squeeze(1) * grad_b
+        b = b - step_size_scalar * grad_b
 
         # 4. Proximal operator (Soft Thresholding) for L1
         # threshold = step * l1_strength
         threshold = step_size * l1_strength
-        w = soft_threshold(w_candidate, threshold)
+        w_new = soft_threshold(w_candidate, threshold)
         if positive:
-            w = torch.clamp(w, min=0.0)
+            w_new = torch.clamp(w_new, min=0.0)
 
-        # Convergence check
-        change = torch.max(torch.abs(w - w_prev))
+        # Convergence check (avoids w_prev clone by computing change before overwriting)
+        change = torch.max(torch.abs(w_new - w))
+        w = w_new
         if change < tol:
             break
 

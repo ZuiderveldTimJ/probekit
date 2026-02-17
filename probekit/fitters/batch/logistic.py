@@ -70,9 +70,15 @@ def fit_logistic_batch(
     i_reg = torch.eye(d + 1, device=device).unsqueeze(0).expand(n_batch, -1, -1).clone()
     i_reg[:, d, d] = 0.0  # No regularization on bias
 
+    # Pre-allocate damping identity (hoisted out of loop)
+    i_damping = 1e-6 * torch.eye(d + 1, device=device).unsqueeze(0)
+
+    # Pre-allocate regularization mask for gradient: 1 for weights, 0 for bias
+    reg_mask = torch.ones(d + 1, device=device, dtype=x.dtype)
+    reg_mask[d] = 0.0  # Don't penalize bias
+
     # Optimization Loop (IRLS)
     for _i in range(max_iter):
-        w_prev = w.clone()
 
         # 1. Predictions
         # logits = x @ w: [b, n, d+1] @ [b, d+1, 1] -> [b, n, 1]
@@ -128,27 +134,29 @@ def fit_logistic_batch(
         residual = y - p  # [b, n]
         grad_data = torch.bmm(x_aug.transpose(1, 2), residual.unsqueeze(-1)).squeeze(-1)  # [b, d+1]
 
-        w_reg = w.clone()
-        w_reg[:, d] = 0.0  # Don't penalize bias
-        grad_total = grad_data - lambda_reg * w_reg
+        # Mask-based regularization gradient (avoids clone)
+        grad_total = grad_data - lambda_reg * (w * reg_mask)
 
         # Solve h * delta = grad_total
-        # Use linalg.solve (or cholesky_solve if h is PD, which it should be)
-        # Add small jitter to diagonal for stability?
+        # H is symmetric positive definite (X^T R X + reg), use Cholesky for ~2x speedup
+        # Add small jitter to diagonal for stability
         # h is [b, d+1, d+1]
-        h_damped = h + 1e-6 * torch.eye(d + 1, device=device).unsqueeze(0)
+        h_damped = h + i_damping
 
         try:
-            delta = torch.linalg.solve(h_damped, grad_total)
+            L = torch.linalg.cholesky(h_damped)
+            delta = torch.cholesky_solve(grad_total.unsqueeze(-1), L).squeeze(-1)
         except RuntimeError:
-            # Fallback or break?
-            # Could use lstsq
-            delta = torch.linalg.lstsq(h_damped, grad_total).solution
+            # Fallback to general solve if Cholesky fails (near-singular)
+            try:
+                delta = torch.linalg.solve(h_damped, grad_total)
+            except RuntimeError:
+                delta = torch.linalg.lstsq(h_damped, grad_total).solution
 
         w = w + delta  # Step size 1.0 (Newton)
 
-        # Check convergence
-        change = torch.max(torch.abs(w - w_prev))
+        # Check convergence using delta directly (avoids w_prev clone)
+        change = torch.max(torch.abs(delta))
         if change < tol:
             break
 
