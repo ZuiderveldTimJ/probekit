@@ -116,7 +116,6 @@ def fit_elastic_net_batch(
 
     # Optimization Loop
     for _i in range(max_iter):
-
         # 1. Forward
         # [b, n, d] @ [b, d, 1] -> [b, n]
         logits = torch.bmm(x_norm, w.unsqueeze(-1)).squeeze(-1) + b.unsqueeze(1)

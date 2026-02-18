@@ -83,9 +83,7 @@ def fit_dim_batch(x: Tensor, y: Tensor, normalize: bool = True) -> ProbeCollecti
         probe = LinearProbe(
             weights=w_cpu[i],
             bias=float(biases_cpu[i]),
-            normalization=NormalizationStats(mean=mu_cpu[i], std=sigma_cpu[i], count=n)
-            if normalize
-            else None,
+            normalization=NormalizationStats(mean=mu_cpu[i], std=sigma_cpu[i], count=n) if normalize else None,
             metadata={"fit_method": "dim_batch"},
         )
         probekit.append(probe)

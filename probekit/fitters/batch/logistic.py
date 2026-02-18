@@ -79,7 +79,6 @@ def fit_logistic_batch(
 
     # Optimization Loop (IRLS)
     for _i in range(max_iter):
-
         # 1. Predictions
         # logits = x @ w: [b, n, d+1] @ [b, d+1, 1] -> [b, n, 1]
         logits = torch.bmm(x_aug, w.unsqueeze(-1)).squeeze(-1)  # [b, n]
