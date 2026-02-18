@@ -48,11 +48,10 @@ def fit_elastic_net_path(
         residual = y - y_mean
         grad = torch.bmm(x_eff.transpose(1, 2), residual.unsqueeze(-1)).squeeze(-1)  # [b, d]
         grad_abs = torch.abs(grad)
-        max_grad = grad_abs.max().item()  # Global max over batch? Or per batch?
-        # We usually want one path for all, or per-batch paths?
-        # Using one path for the whole batch is simpler. Use max over batch.
+        # Defer .item() to after division to minimize GPU-CPU sync points
+        max_grad = grad_abs.max()
 
-        alpha_max = max_grad / (n * (l1_ratio if l1_ratio > 1e-3 else 0.001))
+        alpha_max = (max_grad / (n * (l1_ratio if l1_ratio > 1e-3 else 0.001))).item()
         # Log space down to alpha_max * 1e-3
         alphas = np.logspace(np.log10(alpha_max), np.log10(alpha_max * 1e-3), n_alphas).tolist()
 
@@ -99,10 +98,12 @@ def fit_elastic_net_path(
         )
         path_results.append(col)
 
-        # Extract weights for next
+        # Extract weights for warm-start of next alpha
         w_init, b_init = col.to_tensor()
-        w_init = w_init.to(device)
-        b_init = b_init.to(device)
+        # Only transfer if needed (to_tensor returns CPU tensors)
+        if w_init.device != device:
+            w_init = w_init.to(device)
+            b_init = b_init.to(device)
 
     if select == "all":
         return path_results

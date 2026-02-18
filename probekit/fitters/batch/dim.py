@@ -65,33 +65,25 @@ def fit_dim_batch(x: Tensor, y: Tensor, normalize: bool = True) -> ProbeCollecti
         mu = torch.zeros(n_batch, d, device=device)
         sigma = torch.ones(n_batch, d, device=device)
 
+    # Vectorized bias computation (avoids per-batch Python loop for heavy ops)
+    # Normalize all batches at once: [b, n, d]
+    x_norm = (x - mu.unsqueeze(1)) / sigma.unsqueeze(1)
+    # Scores: [b, n, d] @ [b, d, 1] -> [b, n]
+    scores = torch.bmm(x_norm, w.unsqueeze(-1)).squeeze(-1)
+    # Median per batch: [b]
+    biases = -torch.median(scores, dim=1).values
+
+    # Transfer to CPU once for all batches
+    w_cpu = w.cpu().numpy()
+    mu_cpu = mu.cpu().numpy()
+    sigma_cpu = sigma.cpu().numpy()
+    biases_cpu = biases.cpu().numpy()
+
     for i in range(n_batch):
-        # Extract for this batch
-        wi = w[i]  # [D]
-        mui = mu[i]
-        sigmai = sigma[i]
-
-        # Calculate scores to find bias
-        # s = (x - mu)/sigma @ w
-        # We want median score to be 0 (or balanced threshold)
-        # Actually, standard DiM often sets bias = -(mean1 + mean0)/2 @ w  (midpoint)
-        # But the spec says "median threshold".
-
-        xi = x[i]  # [n, d]
-        # Normalize
-        xi_norm = (xi - mui) / sigmai
-        scores = xi_norm @ wi
-
-        # Bias = -median(scores)
-        # So that median(scores + b) = 0
-        b = -torch.median(scores)
-
         probe = LinearProbe(
-            weights=wi.cpu().numpy(),
-            bias=b.item(),
-            normalization=NormalizationStats(mean=mui.cpu().numpy(), std=sigmai.cpu().numpy(), count=n)
-            if normalize
-            else None,
+            weights=w_cpu[i],
+            bias=float(biases_cpu[i]),
+            normalization=NormalizationStats(mean=mu_cpu[i], std=sigma_cpu[i], count=n) if normalize else None,
             metadata={"fit_method": "dim_batch"},
         )
         probekit.append(probe)

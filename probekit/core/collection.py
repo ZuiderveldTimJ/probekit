@@ -1,11 +1,11 @@
 from collections.abc import Iterator
-from typing import Union, overload
+from typing import Union, cast, overload
 
 import numpy as np
 import torch
 from numpy.typing import NDArray
 
-from .probe import LinearProbe
+from .probe import LinearProbe, NormalizationStats
 
 
 class ProbeCollection:
@@ -46,16 +46,55 @@ class ProbeCollection:
             x = x.detach().cpu().numpy()
 
         batch_size = len(self.probekit)
+
+        if x.ndim not in (2, 3):
+            raise ValueError(f"Expected x with 2 or 3 dims, got {x.ndim}.")
+        if x.ndim == 3 and x.shape[0] != batch_size:
+            raise ValueError(f"Expected x batch dimension {batch_size}, got {x.shape[0]}.")
+
+        # Try vectorized path: stack weights/biases and normalize in bulk.
+        # Only works when all probes have 1D weights of the same dimensionality
+        # and consistent normalization.
+        can_vectorize = batch_size > 1 and all(
+            p.weights.ndim == 1 and p.weights.shape[0] == self.probekit[0].weights.shape[0] for p in self.probekit
+        )
+
+        if can_vectorize:
+            d = self.probekit[0].weights.shape[0]
+            w_stacked = np.stack([p.weights for p in self.probekit])  # [B, D]
+            b_stacked = np.array([p.bias for p in self.probekit], dtype=np.float32)  # [B]
+
+            if x.ndim == 2:
+                # x: [N, D] -> normalize per probe then score
+                # Need per-probe normalization, so expand x to [B, N, D]
+                x_batch = np.broadcast_to(x[np.newaxis], (batch_size, x.shape[0], d))
+            else:
+                x_batch = x  # [B, N, D]
+
+            # Apply normalization vectorized
+            norms = [p.normalization for p in self.probekit]
+            if all(norm is not None for norm in norms):
+                norm_stats = cast(list[NormalizationStats], norms)
+                mu = np.stack([norm.mean for norm in norm_stats])  # [B, D]
+                std = np.stack([norm.std for norm in norm_stats])  # [B, D]
+                std = np.where(std == 0, 1.0, std)
+                # [B, N, D] - [B, 1, D] / [B, 1, D]
+                x_normed = (x_batch - mu[:, np.newaxis, :]) / std[:, np.newaxis, :]
+            else:
+                x_normed = x_batch
+
+            # Vectorized score: [B, N, D] @ [B, D, 1] -> [B, N]
+            scores = np.squeeze(x_normed @ w_stacked[:, :, np.newaxis], axis=-1)
+            scores = (scores + b_stacked[:, np.newaxis]).astype(np.float32)
+            return cast(NDArray[np.float32], scores)
+
+        # Fallback: per-probe loop (handles mixed weight shapes, etc.)
         if x.ndim == 2:
             scores = [probe.predict_score(x) for probe in self.probekit]
-        elif x.ndim == 3:
-            if x.shape[0] != batch_size:
-                raise ValueError(f"Expected x batch dimension {batch_size}, got {x.shape[0]}.")
-            scores = [probe.predict_score(x[i]) for i, probe in enumerate(self.probekit)]
         else:
-            raise ValueError(f"Expected x with 2 or 3 dims, got {x.ndim}.")
+            scores = [probe.predict_score(x[i]) for i, probe in enumerate(self.probekit)]
 
-        return np.stack(scores, axis=0).astype(np.float32)
+        return cast(NDArray[np.float32], np.stack(scores, axis=0).astype(np.float32))
 
     def predict(self, x: NDArray[np.float32] | torch.Tensor, threshold: float = 0.0) -> NDArray[np.int32]:
         """
