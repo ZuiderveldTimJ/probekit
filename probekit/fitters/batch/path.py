@@ -36,7 +36,8 @@ def fit_elastic_net_path(
         # max component of this gradient sets the scale.
 
         # Center y
-        y_mean = y.mean(dim=1, keepdim=True)
+        y_float = y.float()
+        y_mean = y_float.mean(dim=1, keepdim=True)
         # Normalized x if normalize=True
         if normalize:
             mu, sigma = fit_normalization(x)

@@ -92,19 +92,28 @@ def fit_elastic_net(
             count=scaler.n_samples_seen_,
         )
 
-    # 3. Fit Model
-    model = ElasticNetCV(
-        l1_ratio=l1_ratios,
-        alphas=alphas,
-        cv=cv_folds,
-        random_state=random_state,
-        max_iter=max_iter,
-        positive=positive,
-        n_jobs=-1,
-        **kwargs,
-    )
+    import warnings
 
-    model.fit(x_train, y)
+    from sklearn.exceptions import ConvergenceWarning
+
+    elastic_kwargs = {
+        "l1_ratio": l1_ratios,
+        "cv": cv_folds,
+        "random_state": random_state,
+        "max_iter": max(max_iter, 5000),
+        "positive": positive,
+        "n_jobs": -1,
+        **kwargs,
+    }
+    if alphas is not None:
+        elastic_kwargs["alphas"] = alphas
+
+    # 3. Fit Model
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=ConvergenceWarning)
+        warnings.filterwarnings("ignore", category=FutureWarning)
+        model = ElasticNetCV(**elastic_kwargs)
+        model.fit(x_train, y)
 
     # 4. Extract Weights & Remap if Selection was used
     local_weights = model.coef_

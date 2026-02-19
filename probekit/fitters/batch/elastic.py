@@ -1,8 +1,10 @@
+from typing import Any
+
 import torch
 from torch import Tensor
 
 from probekit.core.collection import ProbeCollection
-from probekit.core.probe import LinearProbe, NormalizationStats
+from probekit.core.probe import NormalizationStats
 
 from .normalize import fit_normalization
 
@@ -151,8 +153,6 @@ def fit_elastic_net_batch(
             break
 
     # Pack results
-    probekit = []
-
     # Validation accuracy
     val_accs = None
     if val_x is not None and val_y is not None:
@@ -168,18 +168,23 @@ def fit_elastic_net_batch(
     weights_cpu = w.cpu().numpy()
     bias_cpu = b.cpu().numpy()
 
+    normalizations = [
+        NormalizationStats(mean=mu_cpu[i], std=sigma_cpu[i], count=n) if normalize else None for i in range(n_batch)
+    ]
+    metadatas = []
+
     for i in range(n_batch):
-        meta = {"fit_method": "elastic_batch", "iterations": i}
+        meta: dict[str, Any] = {
+            "fit_method": "elastic_batch",
+            "iterations": i,
+        }
         if val_accs is not None:
-            meta["val_accuracy"] = val_accs[i]
+            meta["val_accuracy"] = float(val_accs[i])
+        metadatas.append(meta)
 
-        probekit.append(
-            LinearProbe(
-                weights=weights_cpu[i],
-                bias=bias_cpu[i].item(),
-                normalization=NormalizationStats(mean=mu_cpu[i], std=sigma_cpu[i], count=n) if normalize else None,
-                metadata=meta,
-            )
-        )
-
-    return ProbeCollection(probekit)
+    return ProbeCollection(
+        weights=weights_cpu,
+        biases=bias_cpu,
+        normalizations=normalizations,
+        metadatas=metadatas,
+    )

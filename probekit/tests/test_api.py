@@ -21,7 +21,7 @@ def data_2d() -> tuple[NDArray[Any], NDArray[Any]]:
 def data_3d() -> tuple[torch.Tensor, torch.Tensor]:
     # [B, N, D]
     x = torch.randn(2, 10, 5)
-    y = torch.randint(0, 2, size=(2, 10))
+    y = torch.randint(0, 2, size=(2, 10)).float()
     return x, y
 
 
@@ -42,12 +42,12 @@ def test_api_routing_3d(data_3d: tuple[torch.Tensor, torch.Tensor]) -> None:
     # Test sae_probe (logistic_batch)
     collection = sae_probe(x, y)
     assert isinstance(collection, ProbeCollection)
-    assert len(collection.probekit) == 2
+    assert len(collection) == 2
 
     # Test dim_probe (dim_batch)
     collection_dim = dim_probe(x, y)
     assert isinstance(collection_dim, ProbeCollection)
-    assert len(collection_dim.probekit) == 2
+    assert len(collection_dim) == 2
 
 
 def test_aliases(data_2d: tuple[NDArray[Any], NDArray[Any]]) -> None:

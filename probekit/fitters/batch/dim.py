@@ -2,7 +2,7 @@ import torch
 from torch import Tensor
 
 from probekit.core.collection import ProbeCollection
-from probekit.core.probe import LinearProbe, NormalizationStats
+from probekit.core.probe import NormalizationStats
 
 from .normalize import fit_normalization
 
@@ -11,13 +11,7 @@ def fit_dim_batch(x: Tensor, y: Tensor, normalize: bool = True) -> ProbeCollecti
     """
     x: [b, n, d]
     y: [n] or [b, n] (binary labels 0/1)
-    Returns: ProbeCollection of b LinearProbe objects
-
-    Algorithm:
-    1. Compute per-class means: mean of x where y==1, mean where y==0, per batch element
-    2. w = class1_mean - class0_mean
-    3. Normalize x, compute bias via median threshold on normalized scores
-    4. Store normalization stats (mu, sigma) on each probe
+    Returns: ProbeCollection
     """
     device = x.device
     if x.ndim != 3:
@@ -33,39 +27,27 @@ def fit_dim_batch(x: Tensor, y: Tensor, normalize: bool = True) -> ProbeCollecti
     if y.shape != (n_batch, n):
         raise ValueError(f"y shape {y.shape} mismatch with x {x.shape}")
 
-    # 1. Compute means
-    # We can use masked summation
-    # y is 0/1.
-    # sum_1 = (X * y.unsqueeze(-1)).sum(dim=1)
-    # count_1 = y.sum(dim=1).unsqueeze(-1)
-
-    y_expanded = y.unsqueeze(-1)  # [b, n, 1]
-
-    sum_1 = (x * y_expanded).sum(dim=1)  # [b, d]
-    count_1 = y_expanded.sum(dim=1)  # [b, 1]
+    # 1. Compute means efficiently using einsum
+    sum_1 = torch.einsum("bnd,bn->bd", x, y)
+    count_1 = y.sum(dim=1, keepdim=True)
     mean_1 = sum_1 / count_1.clamp(min=1.0)
 
-    sum_0 = (x * (1 - y_expanded)).sum(dim=1)
-    count_0 = (1 - y_expanded).sum(dim=1)
+    y_inv = 1.0 - y
+    sum_0 = torch.einsum("bnd,bn->bd", x, y_inv)
+    count_0 = y_inv.sum(dim=1, keepdim=True)
     mean_0 = sum_0 / count_0.clamp(min=1.0)
 
     # 2. Weights
     w = mean_1 - mean_0  # [b, d]
 
     # 3. Bias and Normalization
-    probekit = []
-
-    # If normalize=True, we compute stats and store them.
-    # The bias calculation generally happens on the *normalized* scores if normalization is utilized at inference time.
-    # The spec says: "Normalize x, compute bias via median threshold on normalized scores"
-
     if normalize:
         mu, sigma = fit_normalization(x)  # [b, d]
     else:
         mu = torch.zeros(n_batch, d, device=device)
         sigma = torch.ones(n_batch, d, device=device)
 
-    # Vectorized bias computation (avoids per-batch Python loop for heavy ops)
+    # Vectorized bias computation
     # Normalize all batches at once: [b, n, d]
     x_norm = (x - mu.unsqueeze(1)) / sigma.unsqueeze(1)
     # Scores: [b, n, d] @ [b, d, 1] -> [b, n]
@@ -79,13 +61,14 @@ def fit_dim_batch(x: Tensor, y: Tensor, normalize: bool = True) -> ProbeCollecti
     sigma_cpu = sigma.cpu().numpy()
     biases_cpu = biases.cpu().numpy()
 
-    for i in range(n_batch):
-        probe = LinearProbe(
-            weights=w_cpu[i],
-            bias=float(biases_cpu[i]),
-            normalization=NormalizationStats(mean=mu_cpu[i], std=sigma_cpu[i], count=n) if normalize else None,
-            metadata={"fit_method": "dim_batch"},
-        )
-        probekit.append(probe)
+    normalizations = [
+        NormalizationStats(mean=mu_cpu[i], std=sigma_cpu[i], count=n) if normalize else None for i in range(n_batch)
+    ]
+    metadatas = [{"fit_method": "dim_batch"} for _ in range(n_batch)]
 
-    return ProbeCollection(probekit)
+    return ProbeCollection(
+        weights=w_cpu,
+        biases=biases_cpu,
+        normalizations=normalizations,
+        metadatas=metadatas,
+    )

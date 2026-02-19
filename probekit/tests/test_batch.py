@@ -20,7 +20,7 @@ def test_fit_logistic_batch(batch_data: tuple[torch.Tensor, torch.Tensor]) -> No
     x, y = batch_data
     collection = fit_logistic_batch(x, y, max_iter=5)
     assert isinstance(collection, ProbeCollection)
-    assert len(collection.probekit) == x.shape[0]
+    assert len(collection) == x.shape[0]
 
     # Verify weights shape
     w, b = collection.to_tensor()
@@ -33,7 +33,7 @@ def test_fit_dim_batch(batch_data: tuple[torch.Tensor, torch.Tensor]) -> None:
     x, y = batch_data
     collection = fit_dim_batch(x, y)
     assert isinstance(collection, ProbeCollection)
-    assert len(collection.probekit) == x.shape[0]
+    assert len(collection) == x.shape[0]
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
@@ -41,7 +41,7 @@ def test_fit_elastic_net_batch(batch_data: tuple[torch.Tensor, torch.Tensor]) ->
     x, y = batch_data
     collection = fit_elastic_net_batch(x, y, max_iter=5)
     assert isinstance(collection, ProbeCollection)
-    assert len(collection.probekit) == x.shape[0]
+    assert len(collection) == x.shape[0]
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")

@@ -48,6 +48,8 @@ def fit_logistic(
         )
 
     # 2. Fit Model
+    import warnings
+
     if cv_folds:
         model = LogisticRegressionCV(
             cv=cv_folds,
@@ -66,7 +68,9 @@ def fit_logistic(
             **kwargs,
         )
 
-    model.fit(x, y)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=FutureWarning)
+        model.fit(x, y)
 
     # 3. Extract Weights
     # sklearn returns [n_classes, n_features] for binary too (usually 1 row)
