@@ -81,7 +81,7 @@ def fit_logistic(
         metadata={
             "solver": "LogisticRegressionCV" if cv_folds else "LogisticRegression",
             "C": model.C_[0] if cv_folds else c_param,
-            "cv_accuracy": model.scores_[1].mean() if cv_folds else None,  # Approximate
+            "cv_accuracy": model.scores_[model.classes_[1]].mean() if cv_folds else None,
             "classes": model.classes_.tolist(),
             "n_iter": model.n_iter_.tolist(),
         },
