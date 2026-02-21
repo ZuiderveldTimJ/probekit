@@ -2,6 +2,7 @@
 ElasticNet Fitter (Sparse Probes).
 """
 
+import warnings
 from typing import Any
 
 import numpy as np
@@ -92,10 +93,6 @@ def fit_elastic_net(
             count=scaler.n_samples_seen_,
         )
 
-    import warnings
-
-    from sklearn.exceptions import ConvergenceWarning
-
     elastic_kwargs = {
         "l1_ratio": l1_ratios,
         "cv": cv_folds,
@@ -110,7 +107,6 @@ def fit_elastic_net(
 
     # 3. Fit Model
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=ConvergenceWarning)
         warnings.filterwarnings("ignore", category=FutureWarning)
         model = ElasticNetCV(**elastic_kwargs)
         model.fit(x_train, y)

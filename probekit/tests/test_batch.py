@@ -5,6 +5,7 @@ from probekit.core.collection import ProbeCollection
 from probekit.fitters.batch.dim import fit_dim_batch
 from probekit.fitters.batch.elastic import fit_elastic_net_batch
 from probekit.fitters.batch.logistic import fit_logistic_batch
+from probekit.fitters.batch.normalize import fit_normalization
 
 
 @pytest.fixture
@@ -50,3 +51,9 @@ def test_fit_elastic_net_batch_positive(batch_data: tuple[torch.Tensor, torch.Te
     collection = fit_elastic_net_batch(x, y, max_iter=5, positive=True)
     weights, _ = collection.to_tensor()
     assert torch.all(weights >= -1e-7)
+
+
+def test_fit_normalization_handles_zero_std() -> None:
+    x = torch.ones(2, 5, 3)
+    _mu, sigma = fit_normalization(x)
+    assert torch.allclose(sigma, torch.ones_like(sigma))

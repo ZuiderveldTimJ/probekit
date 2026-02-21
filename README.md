@@ -27,7 +27,8 @@ Optimized PyTorch implementations in `probekit.fitters.batch` handle 3D inputs `
 
 ## Quick Start
 
-The high-level API automatically routes based on the input dimensions:
+The high-level API supports explicit backend control (`backend="torch"` / `backend="sklearn"`),
+and in `backend="auto"` mode it prefers torch when inputs are already torch tensors.
 
 ```python
 from probekit import sae_probe, dim_probe
@@ -36,9 +37,13 @@ from probekit import sae_probe, dim_probe
 probe = sae_probe(X_2d, y_1d)
 
 # 2. Batched Probes (X: [B, N, D], y: [B, N] or [N])
-# Automatically uses GPU fitters and returns a ProbeCollection
+# Uses torch batch fitters and returns a ProbeCollection
 probes = sae_probe(X_3d, y)
 weights, biases = probes.to_tensor() # [B, D], [B]
+
+# 3. Force backend explicitly
+probe_torch = sae_probe(X_2d_torch, y_1d_torch, backend="torch")
+probe_cpu = sae_probe(X_3d_numpy, y_2d_numpy, backend="sklearn")
 ```
 
 ## Steering Vectors

@@ -1,5 +1,6 @@
-import torch
 from torch import Tensor
+
+from probekit.utils.normalization import safe_std_torch
 
 
 def fit_normalization(x: Tensor) -> tuple[Tensor, Tensor]:
@@ -8,7 +9,7 @@ def fit_normalization(x: Tensor) -> tuple[Tensor, Tensor]:
     Returns (mu, sigma) where:
       - mu: [b, d] or [d] (mean per feature, per batch element)
       - sigma: [b, d] or [d] (std per feature, per batch element)
-    sigma is clamped to a minimum of 1e-8 to avoid division by zero.
+    Near-zero sigma values are replaced with 1.0 to avoid division by zero.
     Stats are computed along the n (samples) axis only.
     """
     if x.ndim == 3:
@@ -22,8 +23,8 @@ def fit_normalization(x: Tensor) -> tuple[Tensor, Tensor]:
     else:
         raise ValueError(f"Expected 2D or 3D input, got {x.shape}")
 
-    # Clamp sigma to avoid division by zero
-    sigma = torch.clamp(sigma, min=1e-8)
+    # Replace near-zero sigma to avoid division by zero.
+    sigma = safe_std_torch(sigma)
 
     return mu, sigma
 

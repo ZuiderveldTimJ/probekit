@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pytest
@@ -36,10 +36,9 @@ def test_api_routing_2d(data_2d: tuple[NDArray[Any], NDArray[Any]]) -> None:
     assert isinstance(probe_dim, LinearProbe)
 
 
-@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
 def test_api_routing_3d(data_3d: tuple[torch.Tensor, torch.Tensor]) -> None:
     x, y = data_3d
-    # Test sae_probe (logistic_batch)
+    # Test sae_probe (elastic_batch path)
     collection = sae_probe(x, y)
     assert isinstance(collection, ProbeCollection)
     assert len(collection) == 2
@@ -58,3 +57,28 @@ def test_aliases(data_2d: tuple[NDArray[Any], NDArray[Any]]) -> None:
     assert isinstance(p1, LinearProbe)
     assert isinstance(p2, LinearProbe)
     assert isinstance(p3, LinearProbe)
+
+
+def test_torch_backend_for_2d_tensor() -> None:
+    x = torch.randn(16, 6, dtype=torch.float32)
+    y = torch.randint(0, 2, (16,), dtype=torch.float32)
+
+    probe = logistic_probe(x, y, backend="torch", max_iter=20)
+    assert isinstance(probe, LinearProbe)
+    assert probe.metadata["fit_method"] == "logistic_batch_irls"
+
+
+def test_sklearn_backend_for_3d_numpy() -> None:
+    x = np.random.randn(2, 20, 5).astype(np.float32)
+    y = np.random.randint(0, 2, size=(2, 20)).astype(np.int32)
+
+    probes = logistic_probe(x, y, backend="sklearn", cv_folds=None)
+    assert isinstance(probes, ProbeCollection)
+    assert len(probes) == 2
+    assert probes[0].metadata["solver"] == "LogisticRegression"
+
+
+def test_invalid_backend_raises(data_2d: tuple[NDArray[Any], NDArray[Any]]) -> None:
+    x, y = data_2d
+    with pytest.raises(ValueError):
+        sae_probe(x, y, backend=cast(Any, "not-a-backend"))

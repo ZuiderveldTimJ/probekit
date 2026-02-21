@@ -2,6 +2,7 @@ from typing import Any
 
 import numpy as np
 import pytest
+import torch
 from numpy.typing import NDArray
 
 from probekit.core.collection import ProbeCollection
@@ -56,6 +57,15 @@ class TestLinearProbe:
         preds = probe.predict(x, threshold=0.0)
         assert np.allclose(preds.flatten(), [0, 1])
 
+    def test_predict_score_torch(self) -> None:
+        weights = np.array([1.0, 2.0], dtype=np.float32)
+        probe = LinearProbe(weights, bias=0.5)
+
+        x = torch.tensor([[1.0, 1.0]], dtype=torch.float32)
+        scores = probe.predict_score(x)
+        assert isinstance(scores, torch.Tensor)
+        assert torch.allclose(scores, torch.tensor([3.5], dtype=torch.float32))
+
     def test_normalization(self) -> None:
         weights = np.array([1.0], dtype=np.float32)
         # norm: mean=10, std=2. x=12 -> (12-10)/2 = 1. 1*1 = 1.
@@ -65,6 +75,16 @@ class TestLinearProbe:
         x = np.array([[12.0]], dtype=np.float32)
         scores = probe.predict_score(x)
         assert np.allclose(scores, [1.0])
+
+    def test_zero_std_normalization_safe(self) -> None:
+        weights = np.array([1.0], dtype=np.float32)
+        norm = NormalizationStats(mean=np.array([10.0]), std=np.array([0.0]), count=100)
+        probe = LinearProbe(weights, bias=0.0, normalization=norm)
+
+        x = np.array([[10.0]], dtype=np.float32)
+        scores = probe.predict_score(x)
+        assert np.all(np.isfinite(scores))
+        assert np.allclose(scores, [0.0])
 
     def test_serialization(self) -> None:
         weights = np.array([1.0, 2.0], dtype=np.float32)
@@ -83,7 +103,7 @@ class TestFitters:
         assert isinstance(probe, LinearProbe)
         assert probe.weights.shape == (50,)
         # Should learn something
-        acc = (probe.predict(x) == y).mean()
+        acc = np.mean(np.asarray(probe.predict(x)) == y)
         assert acc > 0.8
 
     def test_fit_elastic(self, sample_data: tuple[NDArray[Any], NDArray[Any]]) -> None:
@@ -132,3 +152,27 @@ class TestProbeCollection:
         assert preds.shape == (2, 2)
         assert np.array_equal(preds[0], np.array([1, 0], dtype=np.int32))
         assert np.array_equal(preds[1], np.array([1, 0], dtype=np.int32))
+
+    def test_predict_with_torch_input(self) -> None:
+        probe_a = LinearProbe(weights=np.array([1.0, 0.0], dtype=np.float32), bias=0.0)
+        probe_b = LinearProbe(weights=np.array([0.0, 1.0], dtype=np.float32), bias=0.0)
+        collection = ProbeCollection([probe_a, probe_b])
+
+        x = torch.tensor([[1.0, -1.0], [-1.0, 1.0]], dtype=torch.float32)
+        scores = collection.predict_score(x)
+        preds = collection.predict(x)
+
+        assert isinstance(scores, torch.Tensor)
+        assert isinstance(preds, torch.Tensor)
+        assert scores.shape == (2, 2)
+        assert preds.shape == (2, 2)
+
+    def test_to_tensor_preserves_device_when_initialized_from_torch(self) -> None:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        weights = torch.randn(2, 3, device=device)
+        biases = torch.randn(2, device=device)
+        collection = ProbeCollection(weights=weights, biases=biases)
+
+        w, b = collection.to_tensor(device=device)
+        assert w.device.type == device
+        assert b.device.type == device

@@ -59,30 +59,12 @@ def fit_elastic_net_path(
     # Sort alphas high to low
     alphas = sorted(alphas, reverse=True)
 
-    path_results = []  # List of ProbeCollections
-
-    # Warm start weights
-    # Note: fit_elastic_net_batch currently doesn't accept init_weights.
-    # We need to modify fit_elastic_net_batch to accept `init_w` and `init_b`?
-    # Or we can just call it and it restarts.
-    # BUT the prompt says "warm starting each solve".
-    # So I definitely need to add `w_init` / `b_init` support to `fit_elastic_net_batch`.
-    # I should update `batch_elastic.py` first.
-    # OR, I can inline the logic or pass a hidden kwargs?
-    # Let's modify `fit_elastic_net_batch` to accept optional initialization.
-
-    # For now, let's assume I can update `batch_elastic.py` in the next step or
-    # pass it if it supports it (it doesn't yet).
-    # I'll update this file to assume `w_init` kwarg exists, and then I'll update `batch_elastic.py`.
+    path_results: list[ProbeCollection] = []
 
     w_init = None
     b_init = None
 
     for alpha in alphas:
-        # Fit
-        # We need to access the raw weights to pass as init for next.
-        # Collection stores probekit, so we can extract.
-
         col = fit_elastic_net_batch(
             x,
             y,
@@ -92,19 +74,13 @@ def fit_elastic_net_path(
             val_x=val_x,
             val_y=val_y,
             max_iter=100 if w_init is not None else 500,  # Faster if warm
-            # We need to pass w_init.
-            # I will add **kwargs to fit_elastic_net_batch or update signature.
             w_init=w_init,
             b_init=b_init,
         )
         path_results.append(col)
 
         # Extract weights for warm-start of next alpha
-        w_init, b_init = col.to_tensor()
-        # Only transfer if needed (to_tensor returns CPU tensors)
-        if w_init.device != device:
-            w_init = w_init.to(device)
-            b_init = b_init.to(device)
+        w_init, b_init = col.to_tensor(device=device)
 
     if select == "all":
         return path_results
@@ -125,7 +101,7 @@ def fit_elastic_net_path(
             best_p = None
             best_acc = -1.0
 
-            for _col_idx, col in enumerate(path_results):
+            for col in path_results:
                 p = col[i]
                 acc = p.metadata.get("val_accuracy", -1.0)
                 if acc > best_acc:

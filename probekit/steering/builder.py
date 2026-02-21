@@ -25,12 +25,13 @@ def build_steering_vector(
     output_dir: str | PathLike[str] | None = None,
 ) -> dict[str, Any]:
     """Build a single steering vector from probe coefficients and SAE decoder directions."""
-    w_dec = sae.W_dec.data
-    steering_vector = torch.zeros(w_dec.shape[1], device="cuda", dtype=torch.float32)
+    w_dec = sae.W_dec.data.to(dtype=torch.float32)
+    device = w_dec.device
+    steering_vector = torch.zeros(w_dec.shape[1], device=device, dtype=torch.float32)
     n_features_used = 0
 
     if isinstance(probe, LinearProbe):
-        coeffs = torch.tensor(probe.direction, device="cuda", dtype=torch.float32)
+        coeffs = torch.tensor(probe.direction, device=device, dtype=torch.float32)
         if len(coeffs) != w_dec.shape[0]:
             raise ValueError(f"LinearProbe direction shape {len(coeffs)} != SAE features {w_dec.shape[0]}")
         steering_vector = torch.einsum("f,fh->h", coeffs, w_dec)
@@ -62,8 +63,8 @@ def build_steering_vector(
         n_features_used = len(feature_ids)
 
     elif isinstance(probe, np.ndarray | list | torch.Tensor):
-        coeffs = probe if isinstance(probe, torch.Tensor) else torch.tensor(probe, device="cuda", dtype=torch.float32)
-        coeffs = coeffs.to("cuda", dtype=torch.float32)
+        coeffs = probe if isinstance(probe, torch.Tensor) else torch.tensor(probe, device=device, dtype=torch.float32)
+        coeffs = coeffs.to(device=device, dtype=torch.float32)
         if len(coeffs) != w_dec.shape[0]:
             raise ValueError(f"Input vector shape {len(coeffs)} != SAE features {w_dec.shape[0]}")
         steering_vector = torch.einsum("f,fh->h", coeffs, w_dec)

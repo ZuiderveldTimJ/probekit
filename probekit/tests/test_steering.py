@@ -16,7 +16,6 @@ def mock_sae() -> MagicMock:
     return sae
 
 
-@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
 def test_build_steering_vector_linear_probe(mock_sae: MagicMock) -> None:
     weights = np.random.randn(100).astype(np.float32)
     probe = LinearProbe(weights, bias=0.0)
@@ -27,7 +26,6 @@ def test_build_steering_vector_linear_probe(mock_sae: MagicMock) -> None:
     assert res["n_features"] == 100
 
 
-@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
 def test_build_steering_vector_legacy_dict(mock_sae: MagicMock) -> None:
     probe_dict = {"features": [0, 1, 2], "weights": [1.0, -0.5, 2.0]}
     res = build_steering_vector(probe_dict, mock_sae, layer=10)
@@ -35,7 +33,6 @@ def test_build_steering_vector_legacy_dict(mock_sae: MagicMock) -> None:
     assert res["vector"].shape == (32,)
 
 
-@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
 def test_build_steering_vectors_batched(mock_sae: MagicMock) -> None:
     probekit = [
         LinearProbe(np.random.randn(100).astype(np.float32), 0.0),

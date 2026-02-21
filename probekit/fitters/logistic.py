@@ -2,6 +2,7 @@
 Standard Logistic Regression Fitter.
 """
 
+import warnings
 from typing import Any
 
 from numpy.typing import NDArray
@@ -48,8 +49,6 @@ def fit_logistic(
         )
 
     # 2. Fit Model
-    import warnings
-
     if cv_folds:
         model = LogisticRegressionCV(
             cv=cv_folds,

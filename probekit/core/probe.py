@@ -13,6 +13,8 @@ import numpy as np
 import torch
 from numpy.typing import NDArray
 
+from probekit.utils.normalization import safe_std_numpy, safe_std_torch
+
 
 @dataclass
 class NormalizationStats:
@@ -69,18 +71,33 @@ class LinearProbe:
             return self.weights.flatten()
         return self.weights
 
-    def predict_score(self, x: NDArray[np.float32] | torch.Tensor) -> NDArray[np.float32]:
+    def _predict_score_torch(self, x: torch.Tensor) -> torch.Tensor:
+        x_t = x.to(dtype=torch.float32)
+
+        if self.normalization:
+            mean = torch.as_tensor(self.normalization.mean, device=x_t.device, dtype=x_t.dtype)
+            std = torch.as_tensor(self.normalization.std, device=x_t.device, dtype=x_t.dtype)
+            x_t = (x_t - mean) / safe_std_torch(std)
+
+        weights = torch.as_tensor(self.weights, device=x_t.device, dtype=x_t.dtype)
+
+        if self.weights.ndim == 1:
+            bias = torch.as_tensor(self.bias, device=x_t.device, dtype=x_t.dtype)
+            return x_t @ weights + bias
+
+        bias = torch.as_tensor(self.bias, device=x_t.device, dtype=x_t.dtype)
+        return x_t @ weights.T + bias
+
+    def predict_score(self, x: NDArray[np.float32] | torch.Tensor) -> NDArray[np.float32] | torch.Tensor:
         """
         Compute raw scores (logits): s(x) = w^T * norm(x) + b.
         """
         if isinstance(x, torch.Tensor):
-            x = x.detach().cpu().numpy()
+            return self._predict_score_torch(x)
 
         # 1. Normalize
         if self.normalization:
-            # Avoid division by zero
-            std = self.normalization.std
-            std = np.where(std == 0, 1.0, std)
+            std = safe_std_numpy(self.normalization.std)
             x = (x - self.normalization.mean) / std
 
         # 2. Linear projection
@@ -93,28 +110,41 @@ class LinearProbe:
 
         return scores
 
-    def project(self, x: NDArray[np.float32] | torch.Tensor) -> NDArray[np.float32]:
+    def project(self, x: NDArray[np.float32] | torch.Tensor) -> NDArray[np.float32] | torch.Tensor:
         """
         Project x onto the probe direction (without bias).
         """
         if isinstance(x, torch.Tensor):
-            x = x.detach().cpu().numpy()
+            x_t = x.to(dtype=torch.float32)
+            if self.normalization:
+                mean = torch.as_tensor(self.normalization.mean, device=x_t.device, dtype=x_t.dtype)
+                std = torch.as_tensor(self.normalization.std, device=x_t.device, dtype=x_t.dtype)
+                x_t = (x_t - mean) / safe_std_torch(std)
 
+            weights = torch.as_tensor(self.weights, device=x_t.device, dtype=x_t.dtype)
+            if self.weights.ndim == 1:
+                return x_t @ weights
+            return x_t @ weights.T
+
+        x_np = x
         if self.normalization:
-            std = self.normalization.std
-            std = np.where(std == 0, 1.0, std)
-            x = (x - self.normalization.mean) / std
+            std_np = safe_std_numpy(self.normalization.std)
+            x_np = cast(NDArray[np.float32], (x_np - self.normalization.mean) / std_np)
 
         if self.weights.ndim == 1:
-            return cast(NDArray[np.float32], (x @ self.weights).astype(np.float32))
+            return cast(NDArray[np.float32], (x_np @ self.weights).astype(np.float32))
         else:
-            return cast(NDArray[np.float32], (x @ self.weights.T).astype(np.float32))
+            return cast(NDArray[np.float32], (x_np @ self.weights.T).astype(np.float32))
 
-    def predict(self, x: NDArray[np.float32] | torch.Tensor, threshold: float = 0.0) -> NDArray[np.int32]:
+    def predict(
+        self, x: NDArray[np.float32] | torch.Tensor, threshold: float = 0.0
+    ) -> NDArray[np.int32] | torch.Tensor:
         """
         Predict binary classes based on threshold.
         """
         scores = self.predict_score(x)
+        if isinstance(scores, torch.Tensor):
+            return (scores > threshold).to(torch.int32)
         return (scores > threshold).astype(np.int32)
 
     def to_dict(self) -> dict[str, Any]:
