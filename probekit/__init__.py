@@ -1,18 +1,10 @@
-"""
-NELP Probes Package.
-
-This package contains tools for training and using linear probekit on neural network activations.
-"""
+"""Top-level exports for probekit."""
 
 from importlib import import_module
 from importlib.metadata import PackageNotFoundError, version
 from typing import Any
 
-# Legacy imports removed (missing directory)
-# Legacy imports removed
 from probekit.api import dim_probe, logistic_probe, nelp_probe, sae_probe
-
-# V2 Exports
 from probekit.core.probe import LinearProbe
 from probekit.fitters.dim import fit_dim
 from probekit.fitters.elastic import fit_elastic_net
@@ -37,7 +29,6 @@ __all__ = [
     "fit_dim",
     "fit_elastic_net",
     "fit_logistic",
-    "load_probe",
     "logistic_probe",
     "nelp_probe",
     "sae_probe",
@@ -46,7 +37,7 @@ __all__ = [
 
 def __getattr__(name: str) -> Any:
     """Lazy-load steering helpers to avoid importing heavy optional deps on import probekit."""
-    if name in {"build_steering_vector", "build_steering_vectors", "load_probe"}:
+    if name in {"build_steering_vector", "build_steering_vectors"}:
         steering = import_module("probekit.steering")
         return getattr(steering, name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
