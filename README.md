@@ -21,7 +21,7 @@ Functional solvers in `probekit.fitters` take training data and return a `Linear
 
 #### Batched GPU Fitters
 Optimized PyTorch implementations in `probekit.fitters.batch` handle 3D inputs `[B, N, D]` efficiently on GPU:
-- `fit_logistic_batch`: Batched IRLS solver.
+- `fit_logistic_batch`: Batched IRLS/Newton solver with auto-switch between dense Newton and memory-safe Newton-CG.
 - `fit_dim_batch`: Vectorized DiM with median thresholding.
 - `fit_elastic_net_path`: Efficiently fits a regularization path (multiple alphas) using warm-starting.
 

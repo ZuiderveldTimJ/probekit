@@ -5,7 +5,7 @@ import pytest
 import torch
 from numpy.typing import NDArray
 
-from probekit.api import dim_probe, logistic_probe, nelp_probe, sae_probe
+from probekit.api import _resolve_torch_device, dim_probe, logistic_probe, nelp_probe, sae_probe
 from probekit.core.collection import ProbeCollection
 from probekit.core.probe import LinearProbe
 
@@ -82,3 +82,9 @@ def test_invalid_backend_raises(data_2d: tuple[NDArray[Any], NDArray[Any]]) -> N
     x, y = data_2d
     with pytest.raises(ValueError):
         sae_probe(x, y, backend=cast(Any, "not-a-backend"))
+
+
+def test_resolve_torch_device_respects_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("PROBEKIT_TORCH_DEVICE", "cpu")
+    resolved = _resolve_torch_device(np.zeros((2, 2), dtype=np.float32), None)
+    assert str(resolved) == "cpu"

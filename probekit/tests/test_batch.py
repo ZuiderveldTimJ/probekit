@@ -57,3 +57,11 @@ def test_fit_normalization_handles_zero_std() -> None:
     x = torch.ones(2, 5, 3)
     _mu, sigma = fit_normalization(x)
     assert torch.allclose(sigma, torch.ones_like(sigma))
+
+
+def test_fit_logistic_batch_can_force_newton_cg() -> None:
+    x = torch.randn(1, 16, 128, dtype=torch.float32)
+    y = torch.randint(0, 2, (1, 16), dtype=torch.float32)
+
+    collection = fit_logistic_batch(x, y, max_iter=3, solver="auto", max_dense_hessian_mb=1e-4)
+    assert collection[0].metadata["newton_solver"] == "newton-cg"

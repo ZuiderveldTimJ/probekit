@@ -1,3 +1,4 @@
+import os
 from typing import Any, Literal, cast
 
 import numpy as np
@@ -48,7 +49,21 @@ def _resolve_torch_device(x: Any, device: str | torch.device | None) -> torch.de
         return torch.device(device)
     if isinstance(x, torch.Tensor):
         return x.device
-    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    env_device = os.getenv("PROBEKIT_TORCH_DEVICE")
+    if env_device:
+        return torch.device(env_device)
+
+    try:
+        default_device = torch.get_default_device()
+        if str(default_device) != "cpu":
+            return torch.device(default_device)
+    except AttributeError:
+        pass
+
+    if torch.cuda.is_available():
+        return torch.device(f"cuda:{torch.cuda.current_device()}")
+    return torch.device("cpu")
 
 
 def _torch_kwargs(kwargs: dict[str, Any], device: torch.device) -> dict[str, Any]:
