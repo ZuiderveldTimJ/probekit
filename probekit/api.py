@@ -82,7 +82,7 @@ def _sklearn_kwargs(kwargs: dict[str, Any]) -> dict[str, Any]:
     return sklearn_kwargs
 
 
-def _fit_elastic_net_batch_search(x_t: torch.Tensor, y_t: torch.Tensor, **kwargs: Any) -> ProbeCollection:
+def fit_sparse_probe_batch(x_t: torch.Tensor, y_t: torch.Tensor, **kwargs: Any) -> ProbeCollection:
     l1_ratios = kwargs.pop("l1_ratios", [0.5])
     if "l1_ratio" in kwargs:
         l1_ratios = [kwargs.pop("l1_ratio")]
@@ -151,10 +151,10 @@ def sae_probe(
         torch_kwargs.setdefault("l1_ratios", [0.5, 0.7, 0.9, 0.95, 1.0])
 
         if x_t.ndim == 2:
-            col = _fit_elastic_net_batch_search(x_t.unsqueeze(0), y_t, **torch_kwargs)
+            col = fit_sparse_probe_batch(x_t.unsqueeze(0), y_t, **torch_kwargs)
             return col[0]
         if x_t.ndim == 3:
-            return _fit_elastic_net_batch_search(x_t, y_t, **torch_kwargs)
+            return fit_sparse_probe_batch(x_t, y_t, **torch_kwargs)
         raise ValueError(f"Expected 2D or 3D input for torch backend, got {x_t.ndim}D.")
 
     x_np = _ensure_numpy(x)
@@ -229,10 +229,10 @@ def nelp_probe(
         torch_kwargs.setdefault("l1_ratios", [0.1, 0.5, 0.7, 0.9])
 
         if x_t.ndim == 2:
-            col = _fit_elastic_net_batch_search(x_t.unsqueeze(0), y_t, **torch_kwargs)
+            col = fit_sparse_probe_batch(x_t.unsqueeze(0), y_t, **torch_kwargs)
             return col[0]
         if x_t.ndim == 3:
-            return _fit_elastic_net_batch_search(x_t, y_t, **torch_kwargs)
+            return fit_sparse_probe_batch(x_t, y_t, **torch_kwargs)
         raise ValueError(f"Expected 2D or 3D input for torch backend, got {x_t.ndim}D.")
 
     x_np = _ensure_numpy(x)
