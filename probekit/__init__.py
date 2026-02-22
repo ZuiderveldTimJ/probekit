@@ -4,7 +4,7 @@ from importlib import import_module
 from importlib.metadata import PackageNotFoundError, version
 from typing import Any
 
-from probekit.api import dim_probe, logistic_probe, nelp_probe, sae_probe
+from probekit.api import dim_probe, fit_sparse_probe_batch, logistic_probe, nelp_probe, sae_probe
 from probekit.core.probe import LinearProbe
 from probekit.fitters.dim import fit_dim
 from probekit.fitters.elastic import fit_elastic_net
@@ -28,6 +28,7 @@ __all__ = [
     "dim_probe",
     "fit_dim",
     "fit_elastic_net",
+    "fit_sparse_probe_batch",
     "fit_logistic",
     "logistic_probe",
     "nelp_probe",

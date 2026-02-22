@@ -1,3 +1,5 @@
+from typing import Any
+
 import numpy as np
 import torch
 from torch import Tensor
@@ -18,6 +20,7 @@ def fit_elastic_net_path(
     val_x: Tensor | None = None,
     val_y: Tensor | None = None,
     select: str = "best_val",  # 'best_val' or 'all'
+    **kwargs: Any,
 ) -> ProbeCollection | list[ProbeCollection]:
     """
     Fits elastic net probekit across a path of alpha values with warm starting.
@@ -73,9 +76,10 @@ def fit_elastic_net_path(
             normalize=normalize,
             val_x=val_x,
             val_y=val_y,
-            max_iter=100 if w_init is not None else 500,  # Faster if warm
+            max_iter=kwargs.get("max_iter", 100 if w_init is not None else 500),  # Faster if warm
             w_init=w_init,
             b_init=b_init,
+            positive=kwargs.get("positive", False),
         )
         path_results.append(col)
 
